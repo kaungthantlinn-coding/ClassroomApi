@@ -5,6 +5,9 @@ using Classroom.Repositories.Interface;
 using Classroom.Services.Implementation;
 using Classroom.Services.Interface;
 using Classroom.Dtos.Submission;
+using Classroom.Validators.Submission;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -91,6 +94,14 @@ namespace Classroom
             builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
             builder.Services.AddScoped<ICommentService, CommentService>();
+            builder.Services.AddScoped<IValidationService, ValidationService>();
+
+            // Register FluentValidation
+            builder.Services.AddFluentValidationAutoValidation();
+            builder.Services.AddValidatorsFromAssemblyContaining<CreateSubmissionValidator>();
+            builder.Services.AddScoped<IValidator<CreateSubmissionDto>, CreateSubmissionValidator>();
+            builder.Services.AddScoped<IValidator<GradeSubmissionDto>, GradeSubmissionValidator>();
+            builder.Services.AddScoped<IValidator<FeedbackSubmissionDto>, FeedbackSubmissionValidator>();
 
             // Configure OpenAPI/Swagger
             builder.Services.AddOpenApi();
