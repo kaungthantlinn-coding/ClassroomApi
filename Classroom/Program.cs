@@ -6,8 +6,17 @@ using Classroom.Services.Implementation;
 using Classroom.Services.Interface;
 using Classroom.Dtos.Submission;
 using Classroom.Dtos.Announcement;
+using Classroom.Dtos.Assignment;
+using Classroom.Dtos.Material;
+using Classroom.Dtos.Course;
+using Classroom.Dtos;
 using Classroom.Validators.Submission;
 using Classroom.Validators.Comment;
+using Classroom.Validators.Assignment;
+using Classroom.Validators.Material;
+using Classroom.Validators.Auth;
+using Classroom.Validators.Announcement;
+using Classroom.Validators.Course;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -101,11 +110,37 @@ namespace Classroom
             // Register FluentValidation
             builder.Services.AddFluentValidationAutoValidation();
             builder.Services.AddValidatorsFromAssemblyContaining<CreateSubmissionValidator>();
+
+            // Submission validators
             builder.Services.AddScoped<IValidator<CreateSubmissionDto>, CreateSubmissionValidator>();
             builder.Services.AddScoped<IValidator<GradeSubmissionDto>, GradeSubmissionValidator>();
             builder.Services.AddScoped<IValidator<FeedbackSubmissionDto>, FeedbackSubmissionValidator>();
+
+            // Comment validators
             builder.Services.AddScoped<IValidator<CreateCommentDto>, CreateCommentDtoValidator>();
             builder.Services.AddScoped<IValidator<UpdateCommentDto>, UpdateCommentDtoValidator>();
+
+            // Assignment validators
+            builder.Services.AddScoped<IValidator<CreateAssignmentDto>, CreateAssignmentValidator>();
+            builder.Services.AddScoped<IValidator<UpdateAssignmentDto>, UpdateAssignmentValidator>();
+
+            // Material validators
+            builder.Services.AddScoped<IValidator<CreateMaterialDto>, CreateMaterialValidator>();
+            builder.Services.AddScoped<IValidator<UpdateMaterialDto>, UpdateMaterialValidator>();
+
+            // Auth validators
+            builder.Services.AddScoped<IValidator<RegisterDto>, RegisterValidator>();
+            builder.Services.AddScoped<IValidator<LoginDto>, LoginValidator>();
+            builder.Services.AddScoped<IValidator<RefreshTokenDto>, RefreshTokenValidator>();
+
+            // Announcement validators
+            builder.Services.AddScoped<IValidator<CreateAnnouncementDto>, CreateAnnouncementValidator>();
+            builder.Services.AddScoped<IValidator<UpdateAnnouncementDto>, UpdateAnnouncementValidator>();
+
+            // Course validators
+            builder.Services.AddScoped<IValidator<CreateCourseDto>, CreateCourseValidator>();
+            builder.Services.AddScoped<IValidator<UpdateCourseDto>, UpdateCourseValidator>();
+            builder.Services.AddScoped<IValidator<EnrollCourseDto>, EnrollCourseValidator>();
 
             // Configure OpenAPI/Swagger
             builder.Services.AddOpenApi();

@@ -18,8 +18,8 @@ namespace Classroom.Validators.Course
                 .MaximumLength(100).WithMessage("Teacher name cannot exceed 100 characters");
 
             RuleFor(x => x.EnrollmentCode)
-                .NotEmpty().WithMessage("Enrollment code is required")
-                .MaximumLength(20).WithMessage("Enrollment code cannot exceed 20 characters");
+                .MaximumLength(20).WithMessage("Enrollment code cannot exceed 20 characters")
+                .When(x => !string.IsNullOrEmpty(x.EnrollmentCode));
 
             RuleFor(x => x.Color)
                 .Matches(@"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$").When(x => !string.IsNullOrEmpty(x.Color))

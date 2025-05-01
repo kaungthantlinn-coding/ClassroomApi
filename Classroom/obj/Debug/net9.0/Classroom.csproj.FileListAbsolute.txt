@@ -9,6 +9,9 @@ D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\Classroom.pdb
 D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\Azure.Core.dll
 D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\Azure.Identity.dll
 D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\BCrypt.Net-Next.dll
+D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\FluentValidation.dll
+D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\FluentValidation.AspNetCore.dll
+D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\FluentValidation.DependencyInjectionExtensions.dll
 D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\Humanizer.dll
 D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\Microsoft.AspNetCore.OpenApi.dll
@@ -152,6 +155,7 @@ D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\Classroom.AssemblyInfo.cs
 D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\Classroom.csproj.CoreCompileInputs.cache
 D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\Classroom.MvcApplicationPartsAssemblyInfo.cs
 D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\Classroom.MvcApplicationPartsAssemblyInfo.cache
+D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\Classroom.sourcelink.json
 D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\scopedcss\bundle\Classroom.styles.css
 D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\staticwebassets.build.json
 D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\staticwebassets.development.json

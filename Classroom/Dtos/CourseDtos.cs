@@ -28,8 +28,8 @@ public class CreateCourseDto
 
     public string? CoverImage { get; set; }
 
-    [Required]
-    public string EnrollmentCode { get; set; } = string.Empty;
+    // EnrollmentCode is now optional as it will be auto-generated
+    public string? EnrollmentCode { get; set; }
 
     public string? Color { get; set; }
 
@@ -51,8 +51,8 @@ public class UpdateCourseDto
 
     public string? CoverImage { get; set; }
 
-    [Required]
-    public string EnrollmentCode { get; set; } = string.Empty;
+    // EnrollmentCode is optional as it's auto-generated on creation
+    public string? EnrollmentCode { get; set; }
 
     public string? Color { get; set; }
 

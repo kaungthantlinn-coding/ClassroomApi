@@ -5,6 +5,8 @@ using Classroom.Repositories.Interface;
 using Classroom.Services.Interface;
 using Microsoft.EntityFrameworkCore;
 
+using System.Security.Cryptography;
+
 namespace Classroom.Services.Implementation;
 
 public class CourseService(ICourseRepository courseRepository) : ICourseService
@@ -43,6 +45,11 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
 
     public async Task<CourseDto> CreateCourseAsync(Classroom.Dtos.Course.CreateCourseDto createCourseDto, int teacherId)
     {
+        // Generate a random enrollment code if not provided or empty
+        string enrollmentCode = string.IsNullOrWhiteSpace(createCourseDto.EnrollmentCode)
+            ? GenerateEnrollmentCode()
+            : createCourseDto.EnrollmentCode;
+
         // Create new course
         var course = new Course
         {
@@ -50,7 +57,7 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
             Section = createCourseDto.Section,
             TeacherName = createCourseDto.TeacherName,
             CoverImage = createCourseDto.CoverImage,
-            EnrollmentCode = createCourseDto.EnrollmentCode,
+            EnrollmentCode = enrollmentCode,
             Color = createCourseDto.Color,
             TextColor = createCourseDto.TextColor,
             Subject = createCourseDto.Subject,
@@ -73,6 +80,35 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
         return MapCourseToDto(createdCourse);
     }
 
+    /// <summary>
+    /// Generates a random enrollment code for a course
+    /// </summary>
+    /// <returns>A 6-character alphanumeric code</returns>
+    private string GenerateEnrollmentCode()
+    {
+        // Define the characters that can be used in the enrollment code
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+        // Create a byte array for the random values
+        byte[] randomBytes = new byte[6];
+
+        // Fill the array with random values
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomBytes);
+        }
+
+        // Convert random bytes to characters from our allowed set
+        char[] result = new char[6];
+        for (int i = 0; i < 6; i++)
+        {
+            // Ensure even distribution by using modulo
+            result[i] = chars[randomBytes[i] % chars.Length];
+        }
+
+        return new string(result);
+    }
+
     public async Task<CourseDto?> UpdateCourseAsync(int courseId, Classroom.Dtos.Course.UpdateCourseDto updateCourseDto, int userId)
     {
         // Check if course exists and user is the teacher
@@ -93,7 +129,11 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
         course.Section = updateCourseDto.Section;
         course.TeacherName = updateCourseDto.TeacherName;
         course.CoverImage = updateCourseDto.CoverImage;
-        course.EnrollmentCode = updateCourseDto.EnrollmentCode;
+        // Only update enrollment code if a new one is provided
+        if (!string.IsNullOrEmpty(updateCourseDto.EnrollmentCode))
+        {
+            course.EnrollmentCode = updateCourseDto.EnrollmentCode;
+        }
         course.Color = updateCourseDto.Color;
         course.TextColor = updateCourseDto.TextColor;
         course.Subject = updateCourseDto.Subject;
