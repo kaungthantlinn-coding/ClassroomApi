@@ -1,0 +1,14 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "Dtos",
+    "Unenroll",
+    "unenroll"
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    "bin/**",
+    "obj/**"
+  ]
+} 
