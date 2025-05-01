@@ -38,6 +38,10 @@ namespace Classroom.Services.Interface
         ValidationResult ValidateUpdateCourse(UpdateCourseDto dto);
         ValidationResult ValidateEnrollCourse(EnrollCourseDto dto);
 
+        // Comment validation
+        ValidationResult ValidateCreateComment(CreateCommentDto dto);
+        ValidationResult ValidateUpdateComment(UpdateCommentDto dto);
+
         void ValidateAndThrow<T>(T dto, IValidator<T> validator);
     }
 }

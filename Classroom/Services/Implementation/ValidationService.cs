@@ -39,6 +39,10 @@ namespace Classroom.Services.Implementation
         private readonly IValidator<UpdateCourseDto> _updateCourseValidator;
         private readonly IValidator<EnrollCourseDto> _enrollCourseValidator;
 
+        // Comment validators
+        private readonly IValidator<CreateCommentDto> _createCommentValidator;
+        private readonly IValidator<UpdateCommentDto> _updateCommentValidator;
+
         public ValidationService(
             // Submission validators
             IValidator<CreateSubmissionDto> createSubmissionValidator,
@@ -65,7 +69,11 @@ namespace Classroom.Services.Implementation
             // Course validators
             IValidator<CreateCourseDto> createCourseValidator,
             IValidator<UpdateCourseDto> updateCourseValidator,
-            IValidator<EnrollCourseDto> enrollCourseValidator)
+            IValidator<EnrollCourseDto> enrollCourseValidator,
+
+            // Comment validators
+            IValidator<CreateCommentDto> createCommentValidator,
+            IValidator<UpdateCommentDto> updateCommentValidator)
         {
             // Submission validators
             _createSubmissionValidator = createSubmissionValidator;
@@ -93,6 +101,10 @@ namespace Classroom.Services.Implementation
             _createCourseValidator = createCourseValidator;
             _updateCourseValidator = updateCourseValidator;
             _enrollCourseValidator = enrollCourseValidator;
+
+            // Comment validators
+            _createCommentValidator = createCommentValidator;
+            _updateCommentValidator = updateCommentValidator;
         }
 
         public ValidationResult ValidateCreateSubmission(CreateSubmissionDto dto)
@@ -171,6 +183,17 @@ namespace Classroom.Services.Implementation
         public ValidationResult ValidateEnrollCourse(EnrollCourseDto dto)
         {
             return _enrollCourseValidator.Validate(dto);
+        }
+
+        // Comment validation methods
+        public ValidationResult ValidateCreateComment(CreateCommentDto dto)
+        {
+            return _createCommentValidator.Validate(dto);
+        }
+
+        public ValidationResult ValidateUpdateComment(UpdateCommentDto dto)
+        {
+            return _updateCommentValidator.Validate(dto);
         }
 
         // Helper method to throw exception if validation fails

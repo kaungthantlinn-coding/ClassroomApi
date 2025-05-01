@@ -5,7 +5,9 @@ using Classroom.Repositories.Interface;
 using Classroom.Services.Implementation;
 using Classroom.Services.Interface;
 using Classroom.Dtos.Submission;
+using Classroom.Dtos.Announcement;
 using Classroom.Validators.Submission;
+using Classroom.Validators.Comment;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -102,6 +104,8 @@ namespace Classroom
             builder.Services.AddScoped<IValidator<CreateSubmissionDto>, CreateSubmissionValidator>();
             builder.Services.AddScoped<IValidator<GradeSubmissionDto>, GradeSubmissionValidator>();
             builder.Services.AddScoped<IValidator<FeedbackSubmissionDto>, FeedbackSubmissionValidator>();
+            builder.Services.AddScoped<IValidator<CreateCommentDto>, CreateCommentDtoValidator>();
+            builder.Services.AddScoped<IValidator<UpdateCommentDto>, UpdateCommentDtoValidator>();
 
             // Configure OpenAPI/Swagger
             builder.Services.AddOpenApi();
