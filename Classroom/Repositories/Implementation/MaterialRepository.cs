@@ -16,7 +16,7 @@ public class MaterialRepository : IMaterialRepository
     public async Task<List<Material>> GetMaterialsByCourseIdAsync(int courseId)
     {
         return await _context.Materials
-            .Where(m => m.ClassId == courseId)
+            .Where(m => m.ClassId == courseId && !m.IsDeleted)
             .OrderByDescending(m => m.CreatedAt)
             .ToListAsync();
     }
@@ -25,7 +25,7 @@ public class MaterialRepository : IMaterialRepository
     {
         return await _context.Materials
             .Include(m => m.Class)
-            .FirstOrDefaultAsync(m => m.MaterialId == materialId);
+            .FirstOrDefaultAsync(m => m.MaterialId == materialId && !m.IsDeleted);
     }
 
     public async Task<Material> CreateAsync(Material material)
@@ -44,13 +44,25 @@ public class MaterialRepository : IMaterialRepository
 
     public async Task DeleteAsync(Material material)
     {
-        _context.Materials.Remove(material);
+        // Implement soft delete
+        material.IsDeleted = true;
+        material.UpdatedAt = DateTime.UtcNow;
+        _context.Materials.Update(material);
         await SaveChangesAsync();
+    }
+
+    public async Task<Material> SoftDeleteAsync(Material material)
+    {
+        material.IsDeleted = true;
+        material.UpdatedAt = DateTime.UtcNow;
+        _context.Materials.Update(material);
+        await SaveChangesAsync();
+        return material;
     }
 
     public async Task<bool> MaterialExistsAsync(int materialId)
     {
-        return await _context.Materials.AnyAsync(m => m.MaterialId == materialId);
+        return await _context.Materials.AnyAsync(m => m.MaterialId == materialId && !m.IsDeleted);
     }
 
     public async Task<bool> IsUserTeacherOfMaterialCourseAsync(int materialId, int userId)
@@ -58,7 +70,7 @@ public class MaterialRepository : IMaterialRepository
         var material = await _context.Materials
             .Include(m => m.Class)
             .ThenInclude(c => c.CourseMembers)
-            .FirstOrDefaultAsync(m => m.MaterialId == materialId);
+            .FirstOrDefaultAsync(m => m.MaterialId == materialId && !m.IsDeleted);
 
         if (material?.Class == null)
         {

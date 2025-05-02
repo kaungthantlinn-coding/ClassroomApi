@@ -2,7 +2,7 @@ using Classroom.Models;
 
 namespace Classroom.Repositories.Interface;
 
-public interface ICommentRepository
+public interface ICommentRepository : IBaseRepository<AnnouncementComment>
 {
     Task<List<AnnouncementComment>> GetAnnouncementCommentsAsync(int announcementId);
     Task<AnnouncementComment?> GetCommentByIdAsync(int commentId);

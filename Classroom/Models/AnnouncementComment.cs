@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Classroom.Models;
 
-public partial class AnnouncementComment
+public partial class AnnouncementComment : EntityBase
 {
     public int CommentId { get; set; }
 

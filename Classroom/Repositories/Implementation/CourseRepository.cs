@@ -15,7 +15,7 @@ public class CourseRepository : ICourseRepository
 
     public async Task<List<Course>> GetAllCoursesAsync()
     {
-        return await _context.Courses.ToListAsync();
+        return await _context.Courses.Where(c => !c.IsDeleted).ToListAsync();
     }
 
     public async Task<List<Course>> GetCoursesByUserIdAsync(int userId)
@@ -23,13 +23,14 @@ public class CourseRepository : ICourseRepository
         return await _context.CourseMembers
             .Where(cm => cm.UserId == userId)
             .Include(cm => cm.Course)
+            .Where(cm => !cm.Course.IsDeleted)
             .Select(cm => cm.Course)
             .ToListAsync();
     }
 
     public async Task<Course?> GetByIdAsync(int courseId)
     {
-        return await _context.Courses.FindAsync(courseId);
+        return await _context.Courses.FirstOrDefaultAsync(c => c.CourseId == courseId && !c.IsDeleted);
     }
 
     public async Task<Course> CreateAsync(Course course)
@@ -48,8 +49,18 @@ public class CourseRepository : ICourseRepository
 
     public async Task DeleteAsync(Course course)
     {
-        _context.Courses.Remove(course);
+        // Implement soft delete
+        course.IsDeleted = true;
+        _context.Courses.Update(course);
         await SaveChangesAsync();
+    }
+
+    public async Task<Course> SoftDeleteAsync(Course course)
+    {
+        course.IsDeleted = true;
+        _context.Courses.Update(course);
+        await SaveChangesAsync();
+        return course;
     }
 
     public async Task<bool> AddMemberAsync(CourseMember courseMember)
@@ -82,7 +93,7 @@ public class CourseRepository : ICourseRepository
 
     public async Task<bool> CourseExistsAsync(int courseId)
     {
-        return await _context.Courses.AnyAsync(c => c.CourseId == courseId);
+        return await _context.Courses.AnyAsync(c => c.CourseId == courseId && !c.IsDeleted);
     }
 
     public async Task<bool> IsUserEnrolledAsync(int courseId, int userId)

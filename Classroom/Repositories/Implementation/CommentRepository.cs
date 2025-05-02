@@ -16,7 +16,7 @@ public class CommentRepository : ICommentRepository
     public async Task<List<AnnouncementComment>> GetAnnouncementCommentsAsync(int announcementId)
     {
         return await _context.AnnouncementComments
-            .Where(c => c.AnnouncementId == announcementId)
+            .Where(c => c.AnnouncementId == announcementId && !c.IsDeleted)
             .Include(c => c.Author)
             .OrderBy(c => c.CreatedAt)
             .ToListAsync();
@@ -27,7 +27,7 @@ public class CommentRepository : ICommentRepository
         return await _context.AnnouncementComments
             .Include(c => c.Author)
             .Include(c => c.Announcement)
-            .FirstOrDefaultAsync(c => c.CommentId == commentId);
+            .FirstOrDefaultAsync(c => c.CommentId == commentId && !c.IsDeleted);
     }
 
     public async Task<AnnouncementComment> CreateCommentAsync(AnnouncementComment comment)
@@ -46,21 +46,33 @@ public class CommentRepository : ICommentRepository
 
     public async Task DeleteCommentAsync(AnnouncementComment comment)
     {
-        _context.AnnouncementComments.Remove(comment);
+        // Implement soft delete
+        comment.IsDeleted = true;
+        comment.UpdatedAt = DateTime.UtcNow;
+        _context.AnnouncementComments.Update(comment);
         await SaveChangesAsync();
+    }
+
+    public async Task<AnnouncementComment> SoftDeleteAsync(AnnouncementComment comment)
+    {
+        comment.IsDeleted = true;
+        comment.UpdatedAt = DateTime.UtcNow;
+        _context.AnnouncementComments.Update(comment);
+        await SaveChangesAsync();
+        return comment;
     }
 
     public async Task<bool> IsUserAuthorOfCommentAsync(int userId, int commentId)
     {
         return await _context.AnnouncementComments
-            .AnyAsync(c => c.CommentId == commentId && c.AuthorId == userId);
+            .AnyAsync(c => c.CommentId == commentId && c.AuthorId == userId && !c.IsDeleted);
     }
 
     public async Task<bool> IsUserTeacherOfCommentCourseAsync(int userId, int commentId)
     {
         var comment = await _context.AnnouncementComments
             .Include(c => c.Announcement)
-            .FirstOrDefaultAsync(c => c.CommentId == commentId);
+            .FirstOrDefaultAsync(c => c.CommentId == commentId && !c.IsDeleted);
 
         if (comment == null)
         {
@@ -74,7 +86,7 @@ public class CommentRepository : ICommentRepository
     public async Task<bool> IsUserInCourseAsync(int userId, int announcementId)
     {
         var announcement = await _context.Announcements
-            .FirstOrDefaultAsync(a => a.AnnouncementId == announcementId);
+            .FirstOrDefaultAsync(a => a.AnnouncementId == announcementId && !a.IsDeleted);
 
         if (announcement == null)
         {

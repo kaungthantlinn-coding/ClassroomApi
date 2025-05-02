@@ -2,7 +2,7 @@ using Classroom.Models;
 
 namespace Classroom.Repositories.Interface;
 
-public interface IAssignmentRepository
+public interface IAssignmentRepository : IBaseRepository<Assignment>
 {
     Task<List<Assignment>> GetAssignmentsByCourseIdAsync(int courseId);
     Task<Assignment?> GetByIdAsync(int assignmentId);

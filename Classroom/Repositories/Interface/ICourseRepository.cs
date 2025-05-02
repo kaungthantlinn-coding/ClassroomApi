@@ -2,7 +2,7 @@ using Classroom.Models;
 
 namespace Classroom.Repositories.Interface;
 
-public interface ICourseRepository
+public interface ICourseRepository : IBaseRepository<Course>
 {
     Task<List<Course>> GetAllCoursesAsync();
     Task<List<Course>> GetCoursesByUserIdAsync(int userId);

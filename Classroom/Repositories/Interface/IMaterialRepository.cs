@@ -2,7 +2,7 @@ using Classroom.Models;
 
 namespace Classroom.Repositories.Interface;
 
-public interface IMaterialRepository
+public interface IMaterialRepository : IBaseRepository<Material>
 {
     Task<List<Material>> GetMaterialsByCourseIdAsync(int courseId);
     Task<Material?> GetByIdAsync(int materialId);

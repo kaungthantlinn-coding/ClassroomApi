@@ -16,7 +16,7 @@ public class AssignmentRepository : IAssignmentRepository
     public async Task<List<Assignment>> GetAssignmentsByCourseIdAsync(int courseId)
     {
         return await _context.Assignments
-            .Where(a => a.ClassId == courseId)
+            .Where(a => a.ClassId == courseId && !a.IsDeleted)
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
     }
@@ -25,7 +25,7 @@ public class AssignmentRepository : IAssignmentRepository
     {
         return await _context.Assignments
             .Include(a => a.Class)
-            .FirstOrDefaultAsync(a => a.AssignmentId == assignmentId);
+            .FirstOrDefaultAsync(a => a.AssignmentId == assignmentId && !a.IsDeleted);
     }
 
     public async Task<Assignment> CreateAsync(Assignment assignment)
@@ -44,13 +44,25 @@ public class AssignmentRepository : IAssignmentRepository
 
     public async Task DeleteAsync(Assignment assignment)
     {
-        _context.Assignments.Remove(assignment);
+        // Implement soft delete
+        assignment.IsDeleted = true;
+        assignment.UpdatedAt = DateTime.UtcNow;
+        _context.Assignments.Update(assignment);
         await SaveChangesAsync();
+    }
+
+    public async Task<Assignment> SoftDeleteAsync(Assignment assignment)
+    {
+        assignment.IsDeleted = true;
+        assignment.UpdatedAt = DateTime.UtcNow;
+        _context.Assignments.Update(assignment);
+        await SaveChangesAsync();
+        return assignment;
     }
 
     public async Task<bool> AssignmentExistsAsync(int assignmentId)
     {
-        return await _context.Assignments.AnyAsync(a => a.AssignmentId == assignmentId);
+        return await _context.Assignments.AnyAsync(a => a.AssignmentId == assignmentId && !a.IsDeleted);
     }
 
     public async Task<bool> IsUserTeacherOfAssignmentCourseAsync(int assignmentId, int userId)

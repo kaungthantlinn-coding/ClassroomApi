@@ -17,6 +17,7 @@ using Classroom.Validators.Material;
 using Classroom.Validators.Auth;
 using Classroom.Validators.Announcement;
 using Classroom.Validators.Course;
+using Classroom.Configuration;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -35,6 +36,9 @@ namespace Classroom
 
             // Add services to the container.
             builder.Services.AddControllers();
+
+            // Configure CORS for React app
+            CorsConfiguration.ConfigureCors(builder.Services);
 
             // Configure JWT Authentication
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
@@ -181,11 +185,22 @@ namespace Classroom
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Classroom API v1");
+                    c.RoutePrefix = string.Empty; // Set Swagger UI at the root
+                });
                 app.MapOpenApi();
             }
 
-            app.UseHttpsRedirection();
+            // Configure HTTPS redirection (only in production)
+            if (!app.Environment.IsDevelopment())
+            {
+                app.UseHttpsRedirection();
+            }
+
+            // Use CORS middleware with the React app policy
+            app.UseCors("AllowReactApp");
 
             // Add Authentication Middleware
             app.UseAuthentication();

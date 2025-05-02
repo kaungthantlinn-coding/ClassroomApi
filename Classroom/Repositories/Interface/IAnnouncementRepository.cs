@@ -2,7 +2,7 @@ using Classroom.Models;
 
 namespace Classroom.Repositories.Interface;
 
-public interface IAnnouncementRepository
+public interface IAnnouncementRepository : IBaseRepository<Announcement>
 {
     Task<List<Announcement>> GetAnnouncementsByCourseIdAsync(int courseId);
     Task<Announcement?> GetByIdAsync(int announcementId);

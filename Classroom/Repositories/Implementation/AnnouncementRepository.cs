@@ -16,7 +16,7 @@ public class AnnouncementRepository : IAnnouncementRepository
     public async Task<List<Announcement>> GetAnnouncementsByCourseIdAsync(int courseId)
     {
         return await _context.Announcements
-            .Where(a => a.ClassId == courseId)
+            .Where(a => a.ClassId == courseId && !a.IsDeleted)
             .OrderByDescending(a => a.CreatedAt)
             .ToListAsync();
     }
@@ -25,7 +25,7 @@ public class AnnouncementRepository : IAnnouncementRepository
     {
         return await _context.Announcements
             .Include(a => a.Class)
-            .FirstOrDefaultAsync(a => a.AnnouncementId == announcementId);
+            .FirstOrDefaultAsync(a => a.AnnouncementId == announcementId && !a.IsDeleted);
     }
 
     public async Task<Announcement> CreateAsync(Announcement announcement)
@@ -44,13 +44,25 @@ public class AnnouncementRepository : IAnnouncementRepository
 
     public async Task DeleteAsync(Announcement announcement)
     {
-        _context.Announcements.Remove(announcement);
+        // Implement soft delete
+        announcement.IsDeleted = true;
+        announcement.UpdatedAt = DateTime.UtcNow;
+        _context.Announcements.Update(announcement);
         await SaveChangesAsync();
+    }
+
+    public async Task<Announcement> SoftDeleteAsync(Announcement announcement)
+    {
+        announcement.IsDeleted = true;
+        announcement.UpdatedAt = DateTime.UtcNow;
+        _context.Announcements.Update(announcement);
+        await SaveChangesAsync();
+        return announcement;
     }
 
     public async Task<bool> AnnouncementExistsAsync(int announcementId)
     {
-        return await _context.Announcements.AnyAsync(a => a.AnnouncementId == announcementId);
+        return await _context.Announcements.AnyAsync(a => a.AnnouncementId == announcementId && !a.IsDeleted);
     }
 
     public async Task<bool> IsUserTeacherOfAnnouncementCourseAsync(int announcementId, int userId)
