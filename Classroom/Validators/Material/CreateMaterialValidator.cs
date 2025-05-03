@@ -22,8 +22,9 @@ namespace Classroom.Validators.Material
                 .WithMessage("Scheduled date must be in format YYYY-MM-DD");
 
             RuleFor(x => x.Color)
-                .Matches(@"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$").When(x => !string.IsNullOrEmpty(x.Color))
-                .WithMessage("Color must be a valid hex color code (e.g. #FF5733)");
+                .Must(color => string.IsNullOrEmpty(color) ||
+                               System.Text.RegularExpressions.Regex.IsMatch(color, @"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"))
+                .WithMessage("Color must be a valid hex color code (e.g. #FF5733) or empty for auto-generation");
         }
     }
 }

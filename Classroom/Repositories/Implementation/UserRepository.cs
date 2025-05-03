@@ -42,6 +42,31 @@ public class UserRepository : IUserRepository
         return user;
     }
 
+    public async Task<bool> ChangePasswordAsync(int userId, string newPasswordHash)
+    {
+        var user = await GetByIdAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        user.Password = newPasswordHash;
+        _context.Users.Update(user);
+        await SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> VerifyPasswordAsync(int userId, string password)
+    {
+        var user = await GetByIdAsync(userId);
+        if (user == null)
+        {
+            return false;
+        }
+
+        return BCrypt.Net.BCrypt.Verify(password, user.Password);
+    }
+
     public async Task<List<User>> GetAllUsersAsync()
     {
         return await _context.Users.ToListAsync();

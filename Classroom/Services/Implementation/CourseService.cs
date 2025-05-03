@@ -1,11 +1,10 @@
 using Classroom.Dtos;
 using Classroom.Dtos.Course;
+using Classroom.Helpers;
 using Classroom.Models;
 using Classroom.Repositories.Interface;
 using Classroom.Services.Interface;
 using Microsoft.EntityFrameworkCore;
-
-using System.Security.Cryptography;
 
 namespace Classroom.Services.Implementation;
 
@@ -45,10 +44,14 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
 
     public async Task<CourseDto> CreateCourseAsync(Classroom.Dtos.Course.CreateCourseDto createCourseDto, int teacherId)
     {
-        // Generate a random enrollment code if not provided or empty
-        string enrollmentCode = string.IsNullOrWhiteSpace(createCourseDto.EnrollmentCode)
-            ? GenerateEnrollmentCode()
-            : createCourseDto.EnrollmentCode;
+        // Always generate a random enrollment code, ignoring any provided value
+        string enrollmentCode = await GenerateEnrollmentCode();
+
+        // Always generate random background color
+        string backgroundColor = ColorHelper.GetRandomBackgroundColor();
+
+        // Always generate appropriate text color based on background color
+        string textColor = ColorHelper.GetTextColorForBackground(backgroundColor);
 
         // Create new course
         var course = new Course
@@ -58,8 +61,8 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
             TeacherName = createCourseDto.TeacherName,
             CoverImage = createCourseDto.CoverImage,
             EnrollmentCode = enrollmentCode,
-            Color = createCourseDto.Color,
-            TextColor = createCourseDto.TextColor,
+            Color = backgroundColor,
+            TextColor = textColor,
             Subject = createCourseDto.Subject,
             Room = createCourseDto.Room,
             CourseGuid = Guid.NewGuid()
@@ -81,32 +84,16 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
     }
 
     /// <summary>
-    /// Generates a random enrollment code for a course
+    /// Generates a unique enrollment code for a course
     /// </summary>
-    /// <returns>A 6-character alphanumeric code</returns>
-    private string GenerateEnrollmentCode()
+    /// <returns>A 6-character alphanumeric code that doesn't exist in the database</returns>
+    private async Task<string> GenerateEnrollmentCode()
     {
-        // Define the characters that can be used in the enrollment code
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        // Get all existing enrollment codes from the database
+        var existingCodes = await _courseRepository.GetAllEnrollmentCodesAsync();
 
-        // Create a byte array for the random values
-        byte[] randomBytes = new byte[6];
-
-        // Fill the array with random values
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(randomBytes);
-        }
-
-        // Convert random bytes to characters from our allowed set
-        char[] result = new char[6];
-        for (int i = 0; i < 6; i++)
-        {
-            // Ensure even distribution by using modulo
-            result[i] = chars[randomBytes[i] % chars.Length];
-        }
-
-        return new string(result);
+        // Generate a unique code that doesn't exist in the database
+        return CodeGenerator.GenerateUniqueCode(existingCodes);
     }
 
     public async Task<CourseDto?> UpdateCourseAsync(int courseId, Classroom.Dtos.Course.UpdateCourseDto updateCourseDto, int userId)
@@ -129,13 +116,10 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
         course.Section = updateCourseDto.Section;
         course.TeacherName = updateCourseDto.TeacherName;
         course.CoverImage = updateCourseDto.CoverImage;
-        // Only update enrollment code if a new one is provided
-        if (!string.IsNullOrEmpty(updateCourseDto.EnrollmentCode))
-        {
-            course.EnrollmentCode = updateCourseDto.EnrollmentCode;
-        }
-        course.Color = updateCourseDto.Color;
-        course.TextColor = updateCourseDto.TextColor;
+       
+        course.Color = ColorHelper.GetRandomBackgroundColor();
+        course.TextColor = ColorHelper.GetTextColorForBackground(course.Color);
+
         course.Subject = updateCourseDto.Subject;
         course.Room = updateCourseDto.Room;
 
@@ -272,9 +256,73 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
         return await _courseRepository.RemoveMemberAsync(member);
     }
 
-    private static Classroom.Dtos.Course.CourseDto MapCourseToDto(Course course)
+    public async Task<bool> IsUserTeacherOfCourseAsync(int courseId, int userId)
     {
-        return new Classroom.Dtos.Course.CourseDto
+        return await _courseRepository.IsUserTeacherOfCourseAsync(courseId, userId);
+    }
+
+    public async Task<string> GenerateEnrollmentCodeAsync()
+    {
+        return await GenerateEnrollmentCode();
+    }
+
+
+    public async Task<string?> RegenerateEnrollmentCodeAsync(int courseId, int userId)
+    {
+        // Check if course exists and user is the teacher
+        var course = await _courseRepository.GetByIdAsync(courseId);
+        if (course == null)
+        {
+            return null;
+        }
+
+        var isTeacher = await _courseRepository.IsUserTeacherOfCourseAsync(courseId, userId);
+        if (!isTeacher)
+        {
+            return null; // User is not the teacher of this course
+        }
+
+        // Generate a new enrollment code
+        string newEnrollmentCode = await GenerateEnrollmentCode();
+
+        // Update the course with the new code
+        course.EnrollmentCode = newEnrollmentCode;
+        await _courseRepository.UpdateAsync(course);
+
+        return newEnrollmentCode;
+    }
+
+    
+    public async Task<(string? backgroundColor, string? textColor)> RegenerateColorsAsync(int courseId, int userId)
+    {
+        // Check if course exists and user is the teacher
+        var course = await _courseRepository.GetByIdAsync(courseId);
+        if (course == null)
+        {
+            return (null, null);
+        }
+
+        var isTeacher = await _courseRepository.IsUserTeacherOfCourseAsync(courseId, userId);
+        if (!isTeacher)
+        {
+            return (null, null); // User is not the teacher of this course
+        }
+
+        // Generate new colors
+        string newBackgroundColor = ColorHelper.GetRandomBackgroundColor();
+        string newTextColor = ColorHelper.GetTextColorForBackground(newBackgroundColor);
+
+        // Update the course with the new colors
+        course.Color = newBackgroundColor;
+        course.TextColor = newTextColor;
+        await _courseRepository.UpdateAsync(course);
+
+        return (newBackgroundColor, newTextColor);
+    }
+
+    private static CourseDto MapCourseToDto(Course course)
+    {
+        return new CourseDto
         {
             CourseId = course.CourseId,
             CourseGuid = course.CourseGuid,

@@ -136,6 +136,7 @@ namespace Classroom
             builder.Services.AddScoped<IValidator<RegisterDto>, RegisterValidator>();
             builder.Services.AddScoped<IValidator<LoginDto>, LoginValidator>();
             builder.Services.AddScoped<IValidator<RefreshTokenDto>, RefreshTokenValidator>();
+            builder.Services.AddScoped<IValidator<ChangePasswordDto>, ChangePasswordValidator>();
 
             // Announcement validators
             builder.Services.AddScoped<IValidator<CreateAnnouncementDto>, CreateAnnouncementValidator>();

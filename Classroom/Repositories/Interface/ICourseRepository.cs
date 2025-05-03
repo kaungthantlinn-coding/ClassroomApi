@@ -17,5 +17,6 @@ public interface ICourseRepository : IBaseRepository<Course>
     Task<bool> CourseExistsAsync(int courseId);
     Task<bool> IsUserEnrolledAsync(int courseId, int userId);
     Task<bool> IsUserTeacherOfCourseAsync(int courseId, int userId);
+    Task<List<string>> GetAllEnrollmentCodesAsync();
     Task SaveChangesAsync();
 }

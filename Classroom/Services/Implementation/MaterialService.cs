@@ -1,4 +1,5 @@
 using Classroom.Dtos.Material;
+using Classroom.Helpers;
 using Classroom.Models;
 using Classroom.Repositories.Interface;
 using Classroom.Services.Interface;
@@ -57,6 +58,11 @@ public class MaterialService(IMaterialRepository materialRepository, ICourseRepo
             throw new KeyNotFoundException($"Course with ID {courseId} not found");
         }
 
+        // Generate random color if not provided or is the default placeholder "string"
+        string materialColor = string.IsNullOrWhiteSpace(createMaterialDto.Color) || createMaterialDto.Color == "string"
+            ? ColorHelper.GetRandomBackgroundColor()
+            : createMaterialDto.Color;
+
         // Create new material
         var material = new Material
         {
@@ -69,7 +75,7 @@ public class MaterialService(IMaterialRepository materialRepository, ICourseRepo
             ClassName = course.Name,
             Section = course.Section,
             CreatedAt = DateTime.UtcNow,
-            Color = createMaterialDto.Color
+            Color = materialColor
         };
 
         await _materialRepository.CreateAsync(material);
@@ -97,7 +103,13 @@ public class MaterialService(IMaterialRepository materialRepository, ICourseRepo
         material.Description = updateMaterialDto.Description;
         material.Topic = updateMaterialDto.Topic;
         material.ScheduledFor = updateMaterialDto.ScheduledFor;
-        material.Color = updateMaterialDto.Color;
+
+        // Only update color if it's not the default placeholder "string"
+        if (updateMaterialDto.Color != "string")
+        {
+            material.Color = updateMaterialDto.Color;
+        }
+
         material.UpdatedAt = DateTime.UtcNow;
 
         await _materialRepository.UpdateAsync(material);

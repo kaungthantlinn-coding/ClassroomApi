@@ -37,6 +37,16 @@ public class AuthService : IAuthService
             };
         }
 
+        // Validate that passwords match (this is also done by the validator, but double-checking here)
+        if (registerDto.Password != registerDto.ConfirmPassword)
+        {
+            return new AuthResponseDto
+            {
+                Success = false,
+                Message = "Passwords do not match"
+            };
+        }
+
         // Hash password
         string passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
 
@@ -88,8 +98,8 @@ public class AuthService : IAuthService
             };
         }
 
-        // Verify password
-        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password);
+        // Verify password using repository method
+        bool isPasswordValid = await _userRepository.VerifyPasswordAsync(user.UserId, loginDto.Password);
         if (!isPasswordValid)
         {
             return new AuthResponseDto
@@ -202,6 +212,71 @@ public class AuthService : IAuthService
             Email = user.Email,
             Avatar = user.Avatar,
             Role = user.Role
+        };
+    }
+
+    public async Task<AuthResponseDto> ChangePasswordAsync(int userId, ChangePasswordDto changePasswordDto)
+    {
+        // Check if user exists
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            return new AuthResponseDto
+            {
+                Success = false,
+                Message = "User not found"
+            };
+        }
+
+        // Verify current password using repository method
+        bool isCurrentPasswordValid = await _userRepository.VerifyPasswordAsync(userId, changePasswordDto.CurrentPassword);
+        if (!isCurrentPasswordValid)
+        {
+            return new AuthResponseDto
+            {
+                Success = false,
+                Message = "Current password is incorrect"
+            };
+        }
+
+        // Verify that new password is different from current password
+        if (changePasswordDto.CurrentPassword == changePasswordDto.NewPassword)
+        {
+            return new AuthResponseDto
+            {
+                Success = false,
+                Message = "New password must be different from current password"
+            };
+        }
+
+        // Verify that new password and confirm password match
+        if (changePasswordDto.NewPassword != changePasswordDto.ConfirmNewPassword)
+        {
+            return new AuthResponseDto
+            {
+                Success = false,
+                Message = "New password and confirm password do not match"
+            };
+        }
+
+        // Hash new password
+        string newPasswordHash = BCrypt.Net.BCrypt.HashPassword(changePasswordDto.NewPassword);
+
+        // Update user's password using repository method
+        bool success = await _userRepository.ChangePasswordAsync(userId, newPasswordHash);
+        if (!success)
+        {
+            return new AuthResponseDto
+            {
+                Success = false,
+                Message = "Failed to change password"
+            };
+        }
+
+        return new AuthResponseDto
+        {
+            Success = true,
+            Message = "Password changed successfully"
         };
     }
 

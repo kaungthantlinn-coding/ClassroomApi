@@ -42,6 +42,8 @@ public class CourseController : ControllerBase
 
     // POST: api/courses
     // Create a new course (teacher only)
+    // Note: EnrollmentCode, Color, and TextColor will be auto-generated if not provided
+    // The auto-generated values will be returned in the response
     [HttpPost]
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> CreateCourse([FromBody] CreateCourseDto createCourseDto)
@@ -149,6 +151,41 @@ public class CourseController : ControllerBase
         return Ok(new { message = "Successfully unenrolled from course" });
     }
 
+    // GET: api/courses/generate-enrollment-code
+    // Generate a unique enrollment code (teacher only)
+    [HttpGet("generate-enrollment-code")]
+    [Authorize(Roles = "Teacher")]
+    public async Task<IActionResult> GenerateEnrollmentCode()
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var code = await _courseService.GenerateEnrollmentCodeAsync();
+        return Ok(new { code });
+    }
+
+    // GET: api/courses/{id}/enrollment-code
+    // Get the enrollment code for a course (teacher only)
+    [HttpGet("{id}/enrollment-code")]
+    [Authorize(Roles = "Teacher")]
+    public async Task<IActionResult> GetCourseEnrollmentCode(int id)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var course = await _courseService.GetCourseByIdAsync(id, currentUserId);
+
+        if (course is null)
+        {
+            return NotFound(new { message = "Course not found or you don't have access to it" });
+        }
+
+        // Check if user is the teacher of the course
+        var isTeacher = await _courseService.IsUserTeacherOfCourseAsync(id, currentUserId);
+        if (!isTeacher)
+        {
+            return Forbid();
+        }
+
+        return Ok(new { enrollmentCode = course.EnrollmentCode });
+    }
+
     // GET: api/courses/{id}/members
     // List members of a course
     [HttpGet("{id}/members")]
@@ -174,5 +211,39 @@ public class CourseController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    // POST: api/courses/{id}/regenerate-enrollment-code
+    // Regenerate enrollment code for a course (teacher only)
+    [HttpPost("{id}/regenerate-enrollment-code")]
+    [Authorize(Roles = "Teacher")]
+    public async Task<IActionResult> RegenerateEnrollmentCode(int id)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var newCode = await _courseService.RegenerateEnrollmentCodeAsync(id, currentUserId);
+
+        if (newCode == null)
+        {
+            return NotFound(new { message = "Course not found or you are not authorized to regenerate its enrollment code" });
+        }
+
+        return Ok(new { enrollmentCode = newCode });
+    }
+
+    // POST: api/courses/{id}/regenerate-colors
+    // Regenerate color scheme for a course (teacher only)
+    [HttpPost("{id}/regenerate-colors")]
+    [Authorize(Roles = "Teacher")]
+    public async Task<IActionResult> RegenerateColors(int id)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var (backgroundColor, textColor) = await _courseService.RegenerateColorsAsync(id, currentUserId);
+
+        if (backgroundColor == null || textColor == null)
+        {
+            return NotFound(new { message = "Course not found or you are not authorized to regenerate its colors" });
+        }
+
+        return Ok(new { backgroundColor, textColor });
     }
 }

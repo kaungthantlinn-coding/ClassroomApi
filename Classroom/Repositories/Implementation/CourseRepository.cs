@@ -108,6 +108,14 @@ public class CourseRepository : ICourseRepository
             .AnyAsync(cm => cm.CourseId == courseId && cm.UserId == userId && cm.Role == "Teacher");
     }
 
+    public async Task<List<string>> GetAllEnrollmentCodesAsync()
+    {
+        return await _context.Courses
+            .Where(c => !c.IsDeleted)
+            .Select(c => c.EnrollmentCode)
+            .ToListAsync();
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();

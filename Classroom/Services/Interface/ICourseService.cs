@@ -15,4 +15,8 @@ public interface ICourseService
     Task<bool> UnenrollFromCourseAsync(int courseId, int userId);
     Task<List<CourseMemberDto>> GetCourseMembersAsync(int courseId, int userId);
     Task<bool> RemoveMemberFromCourseAsync(int courseId, int memberUserId, int requestingUserId);
+    Task<bool> IsUserTeacherOfCourseAsync(int courseId, int userId);
+    Task<string> GenerateEnrollmentCodeAsync();
+    Task<string?> RegenerateEnrollmentCodeAsync(int courseId, int userId);
+    Task<(string? backgroundColor, string? textColor)> RegenerateColorsAsync(int courseId, int userId);
 }

@@ -29,6 +29,7 @@ namespace Classroom.Services.Implementation
         private readonly IValidator<RegisterDto> _registerValidator;
         private readonly IValidator<LoginDto> _loginValidator;
         private readonly IValidator<RefreshTokenDto> _refreshTokenValidator;
+        private readonly IValidator<ChangePasswordDto> _changePasswordValidator;
 
         // Announcement validators
         private readonly IValidator<CreateAnnouncementDto> _createAnnouncementValidator;
@@ -61,6 +62,7 @@ namespace Classroom.Services.Implementation
             IValidator<RegisterDto> registerValidator,
             IValidator<LoginDto> loginValidator,
             IValidator<RefreshTokenDto> refreshTokenValidator,
+            IValidator<ChangePasswordDto> changePasswordValidator,
 
             // Announcement validators
             IValidator<CreateAnnouncementDto> createAnnouncementValidator,
@@ -92,6 +94,7 @@ namespace Classroom.Services.Implementation
             _registerValidator = registerValidator;
             _loginValidator = loginValidator;
             _refreshTokenValidator = refreshTokenValidator;
+            _changePasswordValidator = changePasswordValidator;
 
             // Announcement validators
             _createAnnouncementValidator = createAnnouncementValidator;
@@ -156,6 +159,11 @@ namespace Classroom.Services.Implementation
         public ValidationResult ValidateRefreshToken(RefreshTokenDto dto)
         {
             return _refreshTokenValidator.Validate(dto);
+        }
+
+        public ValidationResult ValidateChangePassword(ChangePasswordDto dto)
+        {
+            return _changePasswordValidator.Validate(dto);
         }
 
         // Announcement validation methods

@@ -28,6 +28,7 @@ namespace Classroom.Services.Interface
         ValidationResult ValidateRegister(RegisterDto dto);
         ValidationResult ValidateLogin(LoginDto dto);
         ValidationResult ValidateRefreshToken(RefreshTokenDto dto);
+        ValidationResult ValidateChangePassword(ChangePasswordDto dto);
 
         // Announcement validation
         ValidationResult ValidateCreateAnnouncement(CreateAnnouncementDto dto);

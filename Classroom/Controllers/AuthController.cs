@@ -1,6 +1,7 @@
 using Classroom.Dtos;
 using Classroom.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -17,7 +18,10 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
+
     [HttpPost("register")]
+    [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
     {
         if (!ModelState.IsValid)
@@ -86,4 +90,7 @@ public class AuthController : ControllerBase
 
         return Ok(new { Success = true, User = user });
     }
+
+
+
 }
