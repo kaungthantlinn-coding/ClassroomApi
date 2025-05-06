@@ -11,8 +11,6 @@ public class CourseDto
     public string? TeacherName { get; set; }
     public string? CoverImage { get; set; }
     public string EnrollmentCode { get; set; } = string.Empty;
-    public string? Color { get; set; }
-    public string? TextColor { get; set; }
     public string? Subject { get; set; }
     public string? Room { get; set; }
 }
@@ -30,10 +28,6 @@ public class CreateCourseDto
 
     // EnrollmentCode is now optional as it will be auto-generated
     public string? EnrollmentCode { get; set; }
-
-    public string? Color { get; set; }
-
-    public string? TextColor { get; set; }
 
     public string? Subject { get; set; }
 
@@ -54,10 +48,6 @@ public class UpdateCourseDto
     // EnrollmentCode is optional as it's auto-generated on creation
     public string? EnrollmentCode { get; set; }
 
-    public string? Color { get; set; }
-
-    public string? TextColor { get; set; }
-
     public string? Subject { get; set; }
 
     public string? Room { get; set; }
@@ -70,6 +60,19 @@ public class CourseMemberDto
     public string Email { get; set; } = string.Empty;
     public string? Avatar { get; set; }
     public string Role { get; set; } = string.Empty;
+}
+
+public class CourseDetailDto : CourseDto
+{
+    public int TotalMembers { get; set; }
+    public int TotalStudents { get; set; }
+    public int TotalTeachers { get; set; }
+    public int TotalAnnouncements { get; set; }
+    public int TotalAssignments { get; set; }
+    public int TotalMaterials { get; set; }
+    public DateTime CreatedDate { get; set; }
+    public DateTime? LastUpdatedDate { get; set; }
+    public List<CourseMemberDto> RecentMembers { get; set; } = new List<CourseMemberDto>();
 }
 
 public class EnrollCourseDto

@@ -72,7 +72,7 @@ public class MaterialRepository : IMaterialRepository
             .ThenInclude(c => c.CourseMembers)
             .FirstOrDefaultAsync(m => m.MaterialId == materialId && !m.IsDeleted);
 
-        if (material?.Class == null)
+        if (material == null || material.Class == null)
         {
             return false;
         }

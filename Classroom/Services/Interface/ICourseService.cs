@@ -8,6 +8,8 @@ public interface ICourseService
     Task<List<CourseDto>> GetAllCoursesAsync();
     Task<List<CourseDto>> GetUserCoursesAsync(int userId);
     Task<CourseDto?> GetCourseByIdAsync(int courseId, int userId);
+    Task<CourseDto?> GetCourseByGuidAsync(Guid courseGuid, int userId);
+    Task<CourseDetailDto?> GetCourseDetailByGuidAsync(Guid courseGuid, int userId);
     Task<CourseDto> CreateCourseAsync(CreateCourseDto createCourseDto, int teacherId);
     Task<CourseDto?> UpdateCourseAsync(int courseId, UpdateCourseDto updateCourseDto, int userId);
     Task<bool> DeleteCourseAsync(int courseId, int userId);
@@ -18,5 +20,5 @@ public interface ICourseService
     Task<bool> IsUserTeacherOfCourseAsync(int courseId, int userId);
     Task<string> GenerateEnrollmentCodeAsync();
     Task<string?> RegenerateEnrollmentCodeAsync(int courseId, int userId);
-    Task<(string? backgroundColor, string? textColor)> RegenerateColorsAsync(int courseId, int userId);
+    Task<CourseDetailDto?> GetCourseDetailAsync(int courseId, int userId);
 }

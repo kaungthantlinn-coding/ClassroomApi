@@ -106,7 +106,12 @@ namespace Classroom
             builder.Services.AddScoped<ICourseService, CourseService>();
             builder.Services.AddScoped<IAssignmentService, AssignmentService>();
             builder.Services.AddScoped<IMaterialService, MaterialService>();
-            builder.Services.AddScoped<IAnnouncementService, AnnouncementService>();
+            builder.Services.AddScoped<IAnnouncementService>(provider =>
+                new AnnouncementService(
+                    provider.GetRequiredService<IAnnouncementRepository>(),
+                    provider.GetRequiredService<ICourseRepository>(),
+                    provider.GetRequiredService<IUserRepository>()
+                ));
             builder.Services.AddScoped<ISubmissionService, SubmissionService>();
             builder.Services.AddScoped<ICommentService, CommentService>();
             builder.Services.AddScoped<IValidationService, ValidationService>();

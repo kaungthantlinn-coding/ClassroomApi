@@ -9,11 +9,16 @@ public class CommentService : ICommentService
 {
     private readonly ICommentRepository _commentRepository;
     private readonly IAnnouncementRepository _announcementRepository;
+    private readonly IUserRepository _userRepository;
 
-    public CommentService(ICommentRepository commentRepository, IAnnouncementRepository announcementRepository)
+    public CommentService(
+        ICommentRepository commentRepository,
+        IAnnouncementRepository announcementRepository,
+        IUserRepository userRepository)
     {
         _commentRepository = commentRepository;
         _announcementRepository = announcementRepository;
+        _userRepository = userRepository;
     }
 
     public async Task<List<CommentDto>> GetAnnouncementCommentsAsync(int announcementId, int userId)
@@ -46,8 +51,7 @@ public class CommentService : ICommentService
         }
 
         // Get user details from the database
-        // We'll just use the user ID for now, as we don't need to query for the user entity
-        // The repository will include the user details when creating the comment
+        var user = await _userRepository.GetByIdAsync(userId);
 
         // Create new comment
         var comment = new AnnouncementComment
@@ -55,11 +59,11 @@ public class CommentService : ICommentService
             AnnouncementId = announcementId,
             Content = createCommentDto.Content,
             AuthorId = userId,
+            AuthorName = user?.Name, // Set the author name from the user object
+            AuthorAvatar = user?.Avatar, // Set the author avatar from the user object
             CreatedAt = DateTime.UtcNow,
             IsPrivate = createCommentDto.IsPrivate
         };
-
-        // The repository will include the user details when fetching the comment
 
         await _commentRepository.CreateCommentAsync(comment);
         return MapCommentToDto(comment);
@@ -122,8 +126,8 @@ public class CommentService : ICommentService
             AnnouncementId = comment.AnnouncementId,
             Content = comment.Content,
             AuthorId = comment.AuthorId,
-            AuthorName = comment.AuthorName ?? "Unknown",
-            AuthorAvatar = comment.AuthorAvatar,
+            AuthorName = comment.Author?.Name ?? comment.AuthorName ?? "Unknown",
+            AuthorAvatar = comment.Author?.Avatar ?? comment.AuthorAvatar,
             CreatedAt = comment.CreatedAt,
             UpdatedAt = comment.UpdatedAt,
             IsPrivate = comment.IsPrivate ?? false

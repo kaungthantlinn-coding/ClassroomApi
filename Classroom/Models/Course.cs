@@ -19,10 +19,6 @@ public partial class Course : EntityBase
 
     public string EnrollmentCode { get; set; } = null!;
 
-    public string? Color { get; set; }
-
-    public string? TextColor { get; set; }
-
     public string? Subject { get; set; }
 
     public string? Room { get; set; }

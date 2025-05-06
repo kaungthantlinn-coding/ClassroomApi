@@ -42,16 +42,87 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
         return MapCourseToDto(course);
     }
 
+    public async Task<CourseDto?> GetCourseByGuidAsync(Guid courseGuid, int userId)
+    {
+        // Check if course exists and user is enrolled
+        var course = await _courseRepository.GetByGuidAsync(courseGuid);
+        if (course == null)
+        {
+            return null;
+        }
+
+        var isEnrolled = await _courseRepository.IsUserEnrolledAsync(course.CourseId, userId);
+        if (!isEnrolled)
+        {
+            return null; // User is not enrolled in this course
+        }
+
+        return MapCourseToDto(course);
+    }
+
+    public async Task<CourseDetailDto?> GetCourseDetailByGuidAsync(Guid courseGuid, int userId)
+    {
+        // Check if course exists and user is enrolled
+        var course = await _courseRepository.GetByGuidAsync(courseGuid);
+        if (course == null)
+        {
+            return null;
+        }
+
+        var isEnrolled = await _courseRepository.IsUserEnrolledAsync(course.CourseId, userId);
+        if (!isEnrolled)
+        {
+            return null; // User is not enrolled in this course
+        }
+
+        // Get course statistics
+        int totalMembers = await _courseRepository.GetCourseMemberCountAsync(course.CourseId);
+        int totalStudents = await _courseRepository.GetCourseStudentCountAsync(course.CourseId);
+        int totalTeachers = await _courseRepository.GetCourseTeacherCountAsync(course.CourseId);
+        int totalAnnouncements = await _courseRepository.GetCourseAnnouncementCountAsync(course.CourseId);
+        int totalAssignments = await _courseRepository.GetCourseAssignmentCountAsync(course.CourseId);
+        int totalMaterials = await _courseRepository.GetCourseMaterialCountAsync(course.CourseId);
+
+        // Get recent members
+        var recentMembers = await _courseRepository.GetRecentMembersAsync(course.CourseId, 5);
+
+        // Create the detailed course DTO
+        var courseDetailDto = new CourseDetailDto
+        {
+            CourseId = course.CourseId,
+            CourseGuid = course.CourseGuid,
+            Name = course.Name,
+            Section = course.Section,
+            TeacherName = course.TeacherName,
+            CoverImage = course.CoverImage,
+            EnrollmentCode = course.EnrollmentCode,
+            Subject = course.Subject,
+            Room = course.Room,
+            TotalMembers = totalMembers,
+            TotalStudents = totalStudents,
+            TotalTeachers = totalTeachers,
+            TotalAnnouncements = totalAnnouncements,
+            TotalAssignments = totalAssignments,
+            TotalMaterials = totalMaterials,
+            CreatedDate = DateTime.UtcNow, // Default value since it's not in the database
+            LastUpdatedDate = null, // Default value since it's not in the database
+            RecentMembers = recentMembers.Select(m => new Dtos.Course.CourseMemberDto
+            {
+                UserId = m.User.UserId,
+                Name = m.User.Name,
+                Email = m.User.Email,
+                Avatar = m.User.Avatar,
+                Role = m.Role
+            }).ToList()
+        };
+
+        return courseDetailDto;
+    }
+
     public async Task<CourseDto> CreateCourseAsync(Classroom.Dtos.Course.CreateCourseDto createCourseDto, int teacherId)
     {
         // Always generate a random enrollment code, ignoring any provided value
         string enrollmentCode = await GenerateEnrollmentCode();
-
-        // Always generate random background color
-        string backgroundColor = ColorHelper.GetRandomBackgroundColor();
-
-        // Always generate appropriate text color based on background color
-        string textColor = ColorHelper.GetTextColorForBackground(backgroundColor);
 
         // Create new course
         var course = new Course
@@ -61,8 +132,6 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
             TeacherName = createCourseDto.TeacherName,
             CoverImage = createCourseDto.CoverImage,
             EnrollmentCode = enrollmentCode,
-            Color = backgroundColor,
-            TextColor = textColor,
             Subject = createCourseDto.Subject,
             Room = createCourseDto.Room,
             CourseGuid = Guid.NewGuid()
@@ -116,12 +185,11 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
         course.Section = updateCourseDto.Section;
         course.TeacherName = updateCourseDto.TeacherName;
         course.CoverImage = updateCourseDto.CoverImage;
-       
-        course.Color = ColorHelper.GetRandomBackgroundColor();
-        course.TextColor = ColorHelper.GetTextColorForBackground(course.Color);
-
         course.Subject = updateCourseDto.Subject;
         course.Room = updateCourseDto.Room;
+
+        // Update the last updated date
+        course.LastUpdatedDate = DateTime.UtcNow;
 
         var updatedCourse = await _courseRepository.UpdateAsync(course);
         return MapCourseToDto(updatedCourse);
@@ -287,37 +355,72 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
 
         // Update the course with the new code
         course.EnrollmentCode = newEnrollmentCode;
+        course.LastUpdatedDate = DateTime.UtcNow;
         await _courseRepository.UpdateAsync(course);
 
         return newEnrollmentCode;
     }
 
-    
-    public async Task<(string? backgroundColor, string? textColor)> RegenerateColorsAsync(int courseId, int userId)
+
+
+
+    public async Task<CourseDetailDto?> GetCourseDetailAsync(int courseId, int userId)
     {
-        // Check if course exists and user is the teacher
-        var course = await _courseRepository.GetByIdAsync(courseId);
+        // Check if course exists and user is enrolled
+        var course = await _courseRepository.GetCourseWithDetailsAsync(courseId);
         if (course == null)
         {
-            return (null, null);
+            return null;
         }
 
-        var isTeacher = await _courseRepository.IsUserTeacherOfCourseAsync(courseId, userId);
-        if (!isTeacher)
+        var isEnrolled = await _courseRepository.IsUserEnrolledAsync(courseId, userId);
+        if (!isEnrolled)
         {
-            return (null, null); // User is not the teacher of this course
+            return null; // User is not enrolled in this course
         }
 
-        // Generate new colors
-        string newBackgroundColor = ColorHelper.GetRandomBackgroundColor();
-        string newTextColor = ColorHelper.GetTextColorForBackground(newBackgroundColor);
+        // Get course statistics
+        int totalMembers = await _courseRepository.GetCourseMemberCountAsync(courseId);
+        int totalStudents = await _courseRepository.GetCourseStudentCountAsync(courseId);
+        int totalTeachers = await _courseRepository.GetCourseTeacherCountAsync(courseId);
+        int totalAnnouncements = await _courseRepository.GetCourseAnnouncementCountAsync(courseId);
+        int totalAssignments = await _courseRepository.GetCourseAssignmentCountAsync(courseId);
+        int totalMaterials = await _courseRepository.GetCourseMaterialCountAsync(courseId);
 
-        // Update the course with the new colors
-        course.Color = newBackgroundColor;
-        course.TextColor = newTextColor;
-        await _courseRepository.UpdateAsync(course);
+        // Get recent members
+        var recentMembers = await _courseRepository.GetRecentMembersAsync(courseId, 5);
 
-        return (newBackgroundColor, newTextColor);
+        // Create the detailed course DTO
+        var courseDetailDto = new CourseDetailDto
+        {
+            CourseId = course.CourseId,
+            CourseGuid = course.CourseGuid,
+            Name = course.Name,
+            Section = course.Section,
+            TeacherName = course.TeacherName,
+            CoverImage = course.CoverImage,
+            EnrollmentCode = course.EnrollmentCode,
+            Subject = course.Subject,
+            Room = course.Room,
+            TotalMembers = totalMembers,
+            TotalStudents = totalStudents,
+            TotalTeachers = totalTeachers,
+            TotalAnnouncements = totalAnnouncements,
+            TotalAssignments = totalAssignments,
+            TotalMaterials = totalMaterials,
+            CreatedDate = DateTime.UtcNow, // Default value since it's not in the database
+            LastUpdatedDate = null, // Default value since it's not in the database
+            RecentMembers = recentMembers.Select(m => new Dtos.Course.CourseMemberDto
+            {
+                UserId = m.User.UserId,
+                Name = m.User.Name,
+                Email = m.User.Email,
+                Avatar = m.User.Avatar,
+                Role = m.Role
+            }).ToList()
+        };
+
+        return courseDetailDto;
     }
 
     private static CourseDto MapCourseToDto(Course course)
@@ -331,8 +434,6 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
             TeacherName = course.TeacherName,
             CoverImage = course.CoverImage,
             EnrollmentCode = course.EnrollmentCode,
-            Color = course.Color,
-            TextColor = course.TextColor,
             Subject = course.Subject,
             Room = course.Room
         };

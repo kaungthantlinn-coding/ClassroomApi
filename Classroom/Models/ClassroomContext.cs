@@ -156,7 +156,6 @@ public partial class ClassroomContext : DbContext
         {
             entity.HasKey(e => e.CourseId).HasName("PK__Courses__C92D71A72F04DAFA");
 
-            entity.Property(e => e.Color).HasMaxLength(20);
             entity.Property(e => e.CourseGuid).HasDefaultValueSql("(newid())");
             entity.Property(e => e.CoverImage).HasMaxLength(255);
             entity.Property(e => e.EnrollmentCode).HasMaxLength(50);
@@ -165,7 +164,6 @@ public partial class ClassroomContext : DbContext
             entity.Property(e => e.Section).HasMaxLength(50);
             entity.Property(e => e.Subject).HasMaxLength(100);
             entity.Property(e => e.TeacherName).HasMaxLength(100);
-            entity.Property(e => e.TextColor).HasMaxLength(20);
         });
 
         modelBuilder.Entity<CourseMember>(entity =>

@@ -22,16 +22,6 @@ namespace Classroom.Validators.Course
                 .When(x => !string.IsNullOrEmpty(x.EnrollmentCode));
             // Note: Enrollment code is optional and will only be updated if provided
 
-            RuleFor(x => x.Color)
-                .Must(color => string.IsNullOrEmpty(color) ||
-                               System.Text.RegularExpressions.Regex.IsMatch(color, @"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"))
-                .WithMessage("Color must be a valid hex color code (e.g. #FF5733) or empty for auto-generation");
-
-            RuleFor(x => x.TextColor)
-                .Must(textColor => string.IsNullOrEmpty(textColor) ||
-                                  System.Text.RegularExpressions.Regex.IsMatch(textColor, @"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"))
-                .WithMessage("Text color must be a valid hex color code (e.g. #FF5733) or empty for auto-generation");
-
             RuleFor(x => x.Subject)
                 .MaximumLength(50).WithMessage("Subject cannot exceed 50 characters");
 

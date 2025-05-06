@@ -1,14 +1,16 @@
 using Classroom.Dtos.Announcement;
 using Classroom.Models;
+using Classroom.Repositories.Implementation;
 using Classroom.Repositories.Interface;
 using Classroom.Services.Interface;
 
 namespace Classroom.Services.Implementation;
 
-public class AnnouncementService(IAnnouncementRepository announcementRepository, ICourseRepository courseRepository) : IAnnouncementService
+public class AnnouncementService(IAnnouncementRepository announcementRepository, ICourseRepository courseRepository, IUserRepository userRepository) : IAnnouncementService
 {
     private readonly IAnnouncementRepository _announcementRepository = announcementRepository;
     private readonly ICourseRepository _courseRepository = courseRepository;
+    private readonly IUserRepository _userRepository = userRepository;
 
     public async Task<List<AnnouncementDto>> GetCourseAnnouncementsAsync(int courseId, int userId)
     {
@@ -43,23 +45,60 @@ public class AnnouncementService(IAnnouncementRepository announcementRepository,
 
     public async Task<AnnouncementDto> CreateAnnouncementAsync(int courseId, CreateAnnouncementDto createAnnouncementDto, int teacherId)
     {
-        // Check if user is a teacher in the course
-        var isTeacher = await _courseRepository.IsUserTeacherOfCourseAsync(courseId, teacherId);
-        if (!isTeacher)
-        {
-            throw new UnauthorizedAccessException("Only teachers can create announcements for this course");
-        }
-
-        // Get course details
-        var course = await _courseRepository.GetByIdAsync(courseId);
+        // Get course details with all related entities
+        var course = await _courseRepository.GetCourseWithDetailsAsync(courseId);
         if (course is null)
         {
             throw new KeyNotFoundException($"Course with ID {courseId} not found");
         }
 
+        // Check if user is a teacher in the course
+        var isTeacher = await _courseRepository.IsUserTeacherOfCourseAsync(courseId, teacherId);
+
+        // Check if user is enrolled in the course
+        var isEnrolled = await _courseRepository.IsUserEnrolledAsync(courseId, teacherId);
+
+        // If the user is not enrolled but has the Teacher role, add them to the course as a teacher
+        if (!isEnrolled)
+        {
+            // Get user details from repository to ensure they exist and have Teacher role
+            var teacher = await _userRepository.GetByIdAsync(teacherId);
+
+            if (teacher == null)
+            {
+                throw new KeyNotFoundException($"User with ID {teacherId} not found");
+            }
+
+            if (teacher.Role != "Teacher")
+            {
+                throw new UnauthorizedAccessException("Only teachers can create announcements for this course");
+            }
+
+            // Add the teacher to the course
+            var courseMember = new CourseMember
+            {
+                CourseId = courseId,
+                UserId = teacherId,
+                Role = "Teacher"
+            };
+
+            await _courseRepository.AddMemberAsync(courseMember);
+
+            // Refresh the course object to include the new member
+            course = await _courseRepository.GetCourseWithDetailsAsync(courseId);
+            if (course is null)
+            {
+                throw new KeyNotFoundException($"Course with ID {courseId} not found");
+            }
+        }
+        else if (!isTeacher)
+        {
+            throw new UnauthorizedAccessException("Only teachers can create announcements for this course");
+        }
+
         // Get teacher details
-        var teacher = course.CourseMembers.FirstOrDefault(cm => cm.UserId == teacherId)?.User;
-        if (teacher is null)
+        var teacherMember = course.CourseMembers.FirstOrDefault(cm => cm.UserId == teacherId);
+        if (teacherMember?.User is null)
         {
             throw new KeyNotFoundException($"Teacher with ID {teacherId} not found in course");
         }
@@ -71,8 +110,8 @@ public class AnnouncementService(IAnnouncementRepository announcementRepository,
             ClassId = courseId,
             Content = createAnnouncementDto.Content,
             AuthorId = teacherId,
-            AuthorName = teacher.Name,
-            AuthorAvatar = teacher.Avatar,
+            AuthorName = teacherMember.User.Name,
+            AuthorAvatar = teacherMember.User.Avatar,
             CreatedAt = DateTime.UtcNow
         };
 

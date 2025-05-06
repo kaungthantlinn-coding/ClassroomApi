@@ -33,6 +33,11 @@ public class CourseRepository : ICourseRepository
         return await _context.Courses.FirstOrDefaultAsync(c => c.CourseId == courseId && !c.IsDeleted);
     }
 
+    public async Task<Course?> GetByGuidAsync(Guid courseGuid)
+    {
+        return await _context.Courses.FirstOrDefaultAsync(c => c.CourseGuid == courseGuid && !c.IsDeleted);
+    }
+
     public async Task<Course> CreateAsync(Course course)
     {
         await _context.Courses.AddAsync(course);
@@ -119,5 +124,68 @@ public class CourseRepository : ICourseRepository
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<int> GetCourseMemberCountAsync(int courseId)
+    {
+        return await _context.CourseMembers
+            .Where(cm => cm.CourseId == courseId)
+            .CountAsync();
+    }
+
+    public async Task<int> GetCourseStudentCountAsync(int courseId)
+    {
+        return await _context.CourseMembers
+            .Where(cm => cm.CourseId == courseId && cm.Role == "Student")
+            .CountAsync();
+    }
+
+    public async Task<int> GetCourseTeacherCountAsync(int courseId)
+    {
+        return await _context.CourseMembers
+            .Where(cm => cm.CourseId == courseId && cm.Role == "Teacher")
+            .CountAsync();
+    }
+
+    public async Task<int> GetCourseAnnouncementCountAsync(int courseId)
+    {
+        return await _context.Announcements
+            .Where(a => a.ClassId == courseId && !a.IsDeleted)
+            .CountAsync();
+    }
+
+    public async Task<int> GetCourseAssignmentCountAsync(int courseId)
+    {
+        return await _context.Assignments
+            .Where(a => a.ClassId == courseId && !a.IsDeleted)
+            .CountAsync();
+    }
+
+    public async Task<int> GetCourseMaterialCountAsync(int courseId)
+    {
+        return await _context.Materials
+            .Where(m => m.ClassId == courseId && !m.IsDeleted)
+            .CountAsync();
+    }
+
+    public async Task<List<CourseMember>> GetRecentMembersAsync(int courseId, int count = 5)
+    {
+        return await _context.CourseMembers
+            .Where(cm => cm.CourseId == courseId)
+            .Include(cm => cm.User)
+            .OrderByDescending(cm => cm.UserId) // Using UserId since CourseMember doesn't have an Id field
+            .Take(count)
+            .ToListAsync();
+    }
+
+    public async Task<Course?> GetCourseWithDetailsAsync(int courseId)
+    {
+        return await _context.Courses
+            .Include(c => c.CourseMembers)
+                .ThenInclude(cm => cm.User)
+            .Include(c => c.Announcements)
+            .Include(c => c.Assignments)
+            .Include(c => c.Materials)
+            .FirstOrDefaultAsync(c => c.CourseId == courseId && !c.IsDeleted);
     }
 }

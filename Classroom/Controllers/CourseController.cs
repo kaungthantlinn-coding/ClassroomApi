@@ -42,7 +42,7 @@ public class CourseController : ControllerBase
 
     // POST: api/courses
     // Create a new course (teacher only)
-    // Note: EnrollmentCode, Color, and TextColor will be auto-generated if not provided
+    // Note: EnrollmentCode will be auto-generated if not provided
     // The auto-generated values will be returned in the response
     [HttpPost]
     [Authorize(Roles = "Teacher")]
@@ -230,20 +230,53 @@ public class CourseController : ControllerBase
         return Ok(new { enrollmentCode = newCode });
     }
 
-    // POST: api/courses/{id}/regenerate-colors
-    // Regenerate color scheme for a course (teacher only)
-    [HttpPost("{id}/regenerate-colors")]
-    [Authorize(Roles = "Teacher")]
-    public async Task<IActionResult> RegenerateColors(int id)
+
+
+    // GET: api/courses/{id}/detail
+    // Get detailed information about a course
+    [HttpGet("{id}/detail")]
+    public async Task<IActionResult> GetCourseDetail(int id)
     {
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var (backgroundColor, textColor) = await _courseService.RegenerateColorsAsync(id, currentUserId);
+        var courseDetail = await _courseService.GetCourseDetailAsync(id, currentUserId);
 
-        if (backgroundColor == null || textColor == null)
+        if (courseDetail == null)
         {
-            return NotFound(new { message = "Course not found or you are not authorized to regenerate its colors" });
+            return NotFound(new { message = "Course not found or you don't have access to it" });
         }
 
-        return Ok(new { backgroundColor, textColor });
+        return Ok(courseDetail);
+    }
+
+    // GET: api/courses/guid/{guid}
+    // Get a specific course by GUID
+    [HttpGet("guid/{guid}")]
+    public async Task<IActionResult> GetCourseByGuid(Guid guid)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var course = await _courseService.GetCourseByGuidAsync(guid, currentUserId);
+
+        if (course == null)
+        {
+            return NotFound(new { message = "Course not found or you don't have access to it" });
+        }
+
+        return Ok(course);
+    }
+
+    // GET: api/courses/guid/{guid}/detail
+    // Get detailed information about a course by GUID
+    [HttpGet("guid/{guid}/detail")]
+    public async Task<IActionResult> GetCourseDetailByGuid(Guid guid)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var courseDetail = await _courseService.GetCourseDetailByGuidAsync(guid, currentUserId);
+
+        if (courseDetail == null)
+        {
+            return NotFound(new { message = "Course not found or you don't have access to it" });
+        }
+
+        return Ok(courseDetail);
     }
 }
