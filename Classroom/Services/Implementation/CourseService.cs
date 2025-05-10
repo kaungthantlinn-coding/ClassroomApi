@@ -247,6 +247,33 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
         return await _courseRepository.AddMemberAsync(courseMember);
     }
 
+    public async Task<bool> EnrollInCourseByCodeAsync(string enrollmentCode, int userId)
+    {
+        // Find course by enrollment code
+        var course = await _courseRepository.GetByEnrollmentCodeAsync(enrollmentCode);
+        if (course == null)
+        {
+            return false; // Course not found with this enrollment code
+        }
+
+        // Check if user is already enrolled
+        var isEnrolled = await _courseRepository.IsUserEnrolledAsync(course.CourseId, userId);
+        if (isEnrolled)
+        {
+            return false; // User is already enrolled
+        }
+
+        // Add user as a course member with Student role
+        var courseMember = new CourseMember
+        {
+            CourseId = course.CourseId,
+            UserId = userId,
+            Role = "Student"
+        };
+
+        return await _courseRepository.AddMemberAsync(courseMember);
+    }
+
     public async Task<bool> UnenrollFromCourseAsync(int courseId, int userId)
     {
         // Check if course exists
@@ -435,7 +462,92 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
             CoverImage = course.CoverImage,
             EnrollmentCode = course.EnrollmentCode,
             Subject = course.Subject,
-            Room = course.Room
+            Room = course.Room,
+            ThemeColor = course.ThemeColor ?? "#1976d2" // Provide a default color if ThemeColor is null
         };
+    }
+
+    public async Task<bool> UpdateCourseThemeAsync(CourseThemeDto themeDto, int userId)
+    {
+        try
+        {
+            // Parse the course ID (which could be a GUID)
+            if (string.IsNullOrEmpty(themeDto.CourseId))
+            {
+                return false;
+            }
+
+            // Try to parse as GUID first
+            if (Guid.TryParse(themeDto.CourseId, out Guid courseGuid))
+            {
+                // Get course by GUID
+                var course = await _courseRepository.GetByGuidAsync(courseGuid);
+                if (course == null)
+                {
+                    return false;
+                }
+
+                var isTeacher = await _courseRepository.IsUserTeacherOfCourseAsync(course.CourseId, userId);
+                if (!isTeacher)
+                {
+                    return false; // User is not the teacher of this course
+                }
+
+                // Update course theme properties
+                if (!string.IsNullOrEmpty(themeDto.HeaderImage))
+                {
+                    course.CoverImage = themeDto.HeaderImage;
+                }
+
+                if (!string.IsNullOrEmpty(themeDto.ThemeColor))
+                {
+                    course.ThemeColor = themeDto.ThemeColor;
+                }
+
+                // Update the last updated date
+                course.LastUpdatedDate = DateTime.UtcNow;
+
+                await _courseRepository.UpdateAsync(course);
+                return true;
+            }
+            else if (int.TryParse(themeDto.CourseId, out int courseId))
+            {
+                // Get course by ID
+                var course = await _courseRepository.GetByIdAsync(courseId);
+                if (course == null)
+                {
+                    return false;
+                }
+
+                var isTeacher = await _courseRepository.IsUserTeacherOfCourseAsync(courseId, userId);
+                if (!isTeacher)
+                {
+                    return false; // User is not the teacher of this course
+                }
+
+                // Update course theme properties
+                if (!string.IsNullOrEmpty(themeDto.HeaderImage))
+                {
+                    course.CoverImage = themeDto.HeaderImage;
+                }
+
+                if (!string.IsNullOrEmpty(themeDto.ThemeColor))
+                {
+                    course.ThemeColor = themeDto.ThemeColor;
+                }
+
+                // Update the last updated date
+                course.LastUpdatedDate = DateTime.UtcNow;
+
+                await _courseRepository.UpdateAsync(course);
+                return true;
+            }
+
+            return false; // Invalid course ID format
+        }
+        catch (Exception)
+        {
+            return false; // Handle any exceptions
+        }
     }
 }

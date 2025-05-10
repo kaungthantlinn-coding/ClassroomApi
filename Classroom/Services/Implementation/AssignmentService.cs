@@ -119,6 +119,12 @@ public class AssignmentService : IAssignmentService
 
     public async Task<bool> DeleteAssignmentAsync(int assignmentId, int userId)
     {
+        // Validate assignment ID
+        if (assignmentId <= 0)
+        {
+            throw new ArgumentException("This assignment cannot be deleted because it is missing an ID. This may happen if the assignment was not properly created through the API.");
+        }
+
         // Check if user is a teacher of the assignment's course
         var isTeacher = await _assignmentRepository.IsUserTeacherOfAssignmentCourseAsync(assignmentId, userId);
         if (!isTeacher)

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Course Theme Update</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        .color-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .color-option.selected {
+            border-color: #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Course Theme Update</h1>
+    
+    <div class="container">
+        <div class="form-group">
+            <label for="token">JWT Token:</label>
+            <input type="text" id="token" placeholder="Paste your JWT token here">
+        </div>
+        
+        <div class="form-group">
+            <label for="courseId">Course ID (GUID):</label>
+            <input type="text" id="courseId" placeholder="Enter course GUID">
+        </div>
+        
+        <div class="form-group">
+            <label>Theme Color:</label>
+            <div class="color-options">
+                <div class="color-option" style="background-color: #1976d2;" data-color="#1976d2"></div>
+                <div class="color-option" style="background-color: #2e7d32;" data-color="#2e7d32"></div>
+                <div class="color-option" style="background-color: #d32f2f;" data-color="#d32f2f"></div>
+                <div class="color-option" style="background-color: #ed6c02;" data-color="#ed6c02"></div>
+                <div class="color-option" style="background-color: #0097a7;" data-color="#0097a7"></div>
+                <div class="color-option" style="background-color: #9c27b0;" data-color="#9c27b0"></div>
+                <div class="color-option" style="background-color: #2196f3;" data-color="#2196f3"></div>
+                <div class="color-option" style="background-color: #757575;" data-color="#757575"></div>
+            </div>
+            <input type="hidden" id="themeColor">
+        </div>
+        
+        <div class="form-group">
+            <label for="headerImage">Header Image URL:</label>
+            <input type="text" id="headerImage" placeholder="Enter image URL">
+        </div>
+        
+        <button id="updateButton">Update Course Theme</button>
+    </div>
+    
+    <div class="result" id="result" style="display: none;"></div>
+    
+    <script>
+        // Handle color selection
+        document.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('click', function() {
+                // Remove selected class from all options
+                document.querySelectorAll('.color-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                
+                // Add selected class to clicked option
+                this.classList.add('selected');
+                
+                // Set the color value
+                document.getElementById('themeColor').value = this.dataset.color;
+            });
+        });
+        
+        // Handle form submission
+        document.getElementById('updateButton').addEventListener('click', async function() {
+            const token = document.getElementById('token').value;
+            const courseId = document.getElementById('courseId').value;
+            const themeColor = document.getElementById('themeColor').value;
+            const headerImage = document.getElementById('headerImage').value;
+            
+            if (!token) {
+                showResult('Please enter a JWT token', 'error');
+                return;
+            }
+            
+            if (!courseId) {
+                showResult('Please enter a course ID', 'error');
+                return;
+            }
+            
+            try {
+                const response = await updateCourseTheme(token, courseId, themeColor, headerImage);
+                showResult('Course theme updated successfully: ' + JSON.stringify(response), 'success');
+            } catch (error) {
+                showResult('Error updating course theme: ' + error.message, 'error');
+            }
+        });
+        
+        // Function to update course theme
+        async function updateCourseTheme(token, courseId, themeColor, headerImage) {
+            // Prepare the request data
+            const themeData = {
+                courseId: courseId,
+                themeColor: themeColor,
+                headerImage: headerImage
+            };
+            
+            // Make the API request
+            const response = await fetch('http://localhost:5203/api/courses/theme', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(themeData)
+            });
+            
+            // Check if the request was successful
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to update course theme');
+            }
+            
+            // Return the success response
+            return await response.json();
+        }
+        
+        // Function to show result
+        function showResult(message, type) {
+            const resultElement = document.getElementById('result');
+            resultElement.textContent = message;
+            resultElement.style.display = 'block';
+            
+            // Remove existing classes
+            resultElement.classList.remove('error', 'success');
+            
+            // Add appropriate class
+            resultElement.classList.add(type);
+        }
+    </script>
+</body>
+</html>

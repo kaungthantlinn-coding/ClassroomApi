@@ -1,6 +1,7 @@
 using Classroom.Dtos.Submission;
 using Classroom.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -49,7 +50,7 @@ public class SubmissionController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Forbid(ex.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {
@@ -99,7 +100,7 @@ public class SubmissionController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Forbid(ex.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
     }
 
@@ -129,7 +130,37 @@ public class SubmissionController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Forbid(ex.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+    }
+
+    // DELETE: api/submissions/{id}/unsubmit
+    // Unsubmit a submission (student only)
+    [HttpDelete("submissions/{id}/unsubmit")]
+    [Authorize(Roles = "Student")]
+    public async Task<IActionResult> UnsubmitSubmission(int id)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+        try
+        {
+            var submission = await _submissionService.UnsubmitSubmissionAsync(id, currentUserId);
+
+            if (submission is null)
+            {
+                return NotFound($"Submission with ID {id} not found or you don't have access to it");
+            }
+
+            // Return a success response with the updated/deleted submission info
+            return Ok(submission);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 }

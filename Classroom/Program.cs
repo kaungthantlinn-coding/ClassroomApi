@@ -21,10 +21,10 @@ using Classroom.Configuration;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.Swagger;
 
 namespace Classroom
 {
@@ -42,11 +42,8 @@ namespace Classroom
 
             // Configure JWT Authentication
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
-            var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
-            if (jwtSettings == null)
-            {
-                throw new InvalidOperationException("JwtSettings configuration is missing");
-            }
+            var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
+                ?? throw new InvalidOperationException("JwtSettings configuration is missing");
 
             // Set Secret equal to Key for backward compatibility
             jwtSettings.Secret = jwtSettings.Key;
@@ -116,9 +113,15 @@ namespace Classroom
             builder.Services.AddScoped<ICommentService, CommentService>();
             builder.Services.AddScoped<IValidationService, ValidationService>();
 
-            // Register FluentValidation
-            builder.Services.AddFluentValidationAutoValidation();
+            // Register FluentValidation but disable automatic validation for assignments and materials
+            builder.Services.AddFluentValidationClientsideAdapters();
             builder.Services.AddValidatorsFromAssemblyContaining<CreateSubmissionValidator>();
+
+            // Disable automatic validation by removing the filter
+            builder.Services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.SuppressModelStateInvalidFilter = true;
+            });
 
             // Submission validators
             builder.Services.AddScoped<IValidator<CreateSubmissionDto>, CreateSubmissionValidator>();
@@ -151,6 +154,7 @@ namespace Classroom
             builder.Services.AddScoped<IValidator<CreateCourseDto>, CreateCourseValidator>();
             builder.Services.AddScoped<IValidator<UpdateCourseDto>, UpdateCourseValidator>();
             builder.Services.AddScoped<IValidator<EnrollCourseDto>, EnrollCourseValidator>();
+            builder.Services.AddScoped<IValidator<CourseThemeDto>, CourseThemeValidator>();
 
             // Configure OpenAPI/Swagger
             builder.Services.AddOpenApi();

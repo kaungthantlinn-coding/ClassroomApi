@@ -3,6 +3,7 @@ using Classroom.Models;
 using Classroom.Repositories.Interface;
 using Classroom.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using System.Security.Claims;
@@ -47,7 +48,7 @@ public class AnnouncementController(IAnnouncementService announcementService) : 
             // Check if the user has the Teacher role
             if (userRole != "Teacher")
             {
-                return Forbid("Only teachers can create announcements");
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only teachers can create announcements" });
             }
 
             var announcement = await _announcementService.CreateAnnouncementAsync(courseId, createAnnouncementDto, currentUserId);
@@ -55,7 +56,7 @@ public class AnnouncementController(IAnnouncementService announcementService) : 
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Forbid(ex.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {
@@ -82,7 +83,7 @@ public class AnnouncementController(IAnnouncementService announcementService) : 
         // Check if user has the Teacher role
         if (userRole != "Teacher")
         {
-            return Forbid("Only teachers can create announcements");
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Only teachers can create announcements" });
         }
 
         try
@@ -128,7 +129,7 @@ public class AnnouncementController(IAnnouncementService announcementService) : 
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Forbid(ex.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
         catch (KeyNotFoundException ex)
         {
@@ -188,7 +189,7 @@ public class AnnouncementController(IAnnouncementService announcementService) : 
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Forbid(ex.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
     }
 
@@ -213,7 +214,7 @@ public class AnnouncementController(IAnnouncementService announcementService) : 
         }
         catch (UnauthorizedAccessException ex)
         {
-            return Forbid(ex.Message);
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
     }
 }

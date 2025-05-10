@@ -14,6 +14,7 @@ public interface ICourseService
     Task<CourseDto?> UpdateCourseAsync(int courseId, UpdateCourseDto updateCourseDto, int userId);
     Task<bool> DeleteCourseAsync(int courseId, int userId);
     Task<bool> EnrollInCourseAsync(int courseId, string enrollmentCode, int userId);
+    Task<bool> EnrollInCourseByCodeAsync(string enrollmentCode, int userId);
     Task<bool> UnenrollFromCourseAsync(int courseId, int userId);
     Task<List<CourseMemberDto>> GetCourseMembersAsync(int courseId, int userId);
     Task<bool> RemoveMemberFromCourseAsync(int courseId, int memberUserId, int requestingUserId);
@@ -21,4 +22,5 @@ public interface ICourseService
     Task<string> GenerateEnrollmentCodeAsync();
     Task<string?> RegenerateEnrollmentCodeAsync(int courseId, int userId);
     Task<CourseDetailDto?> GetCourseDetailAsync(int courseId, int userId);
+    Task<bool> UpdateCourseThemeAsync(CourseThemeDto themeDto, int userId);
 }

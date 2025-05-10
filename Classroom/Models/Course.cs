@@ -23,6 +23,8 @@ public partial class Course : EntityBase
 
     public string? Room { get; set; }
 
+    public string? ThemeColor { get; set; }
+
     public virtual ICollection<Announcement> Announcements { get; set; } = new List<Announcement>();
 
     public virtual ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();

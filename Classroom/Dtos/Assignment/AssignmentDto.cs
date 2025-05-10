@@ -22,7 +22,7 @@ public class AssignmentDto
 
 public class CreateAssignmentDto
 {
-    public string Title { get; set; } = null!;
+    public string? Title { get; set; }
     public string? Instructions { get; set; }
     public string? Points { get; set; }
     public string? DueDate { get; set; }
@@ -35,7 +35,7 @@ public class CreateAssignmentDto
 
 public class UpdateAssignmentDto
 {
-    public string Title { get; set; } = null!;
+    public string? Title { get; set; }
     public string? Instructions { get; set; }
     public string? Points { get; set; }
     public string? DueDate { get; set; }

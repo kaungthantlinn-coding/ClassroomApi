@@ -2,6 +2,7 @@ using Classroom.Dtos;
 using Classroom.Dtos.Course;
 using Classroom.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -180,7 +181,7 @@ public class CourseController : ControllerBase
         var isTeacher = await _courseService.IsUserTeacherOfCourseAsync(id, currentUserId);
         if (!isTeacher)
         {
-            return Forbid();
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not authorized to access the enrollment code" });
         }
 
         return Ok(new { enrollmentCode = course.EnrollmentCode });
@@ -278,5 +279,48 @@ public class CourseController : ControllerBase
         }
 
         return Ok(courseDetail);
+    }
+
+    // PUT: api/courses/theme
+    // Update course theme (teacher only)
+    [HttpPut("theme")]
+    public async Task<IActionResult> UpdateCourseTheme([FromBody] CourseThemeDto themeDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var result = await _courseService.UpdateCourseThemeAsync(themeDto, currentUserId);
+
+        if (!result)
+        {
+            return NotFound(new { message = "Course not found or you are not authorized to update its theme" });
+        }
+
+        return Ok(new { message = "Course theme updated successfully" });
+    }
+
+    // POST: api/courses/enroll-by-code
+    // Enroll in a course using just the enrollment code
+    // This endpoint works for both students and teachers
+    [HttpPost("enroll-by-code")]
+    public async Task<IActionResult> EnrollByCode([FromBody] EnrollCourseDto enrollCourseDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var result = await _courseService.EnrollInCourseByCodeAsync(enrollCourseDto.EnrollmentCode, currentUserId);
+
+        if (!result)
+        {
+            return BadRequest(new { message = "Failed to enroll in course. Check if the course exists and the enrollment code is correct." });
+        }
+
+        return Ok(new { message = "Successfully enrolled in course" });
     }
 }

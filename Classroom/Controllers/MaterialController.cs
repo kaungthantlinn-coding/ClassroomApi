@@ -34,10 +34,7 @@ public class MaterialController : ControllerBase
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> CreateMaterial(int courseId, [FromBody] CreateMaterialDto createMaterialDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
+        // Validation removed as requested
 
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
@@ -78,10 +75,7 @@ public class MaterialController : ControllerBase
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> UpdateMaterial(int id, [FromBody] UpdateMaterialDto updateMaterialDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
+        // Validation removed as requested
 
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 

@@ -45,6 +45,19 @@ public class SubmissionRepository : ISubmissionRepository
         return submission;
     }
 
+    public async Task<bool> DeleteSubmissionAsync(int submissionId)
+    {
+        var submission = await _context.Submissions.FindAsync(submissionId);
+        if (submission == null)
+        {
+            return false;
+        }
+
+        _context.Submissions.Remove(submission);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<bool> IsUserAssignedToAssignmentAsync(int userId, int assignmentId)
     {
         var assignment = await _context.Assignments
@@ -73,5 +86,49 @@ public class SubmissionRepository : ISubmissionRepository
 
         return await _context.CourseMembers
             .AnyAsync(cm => cm.CourseId == assignment.ClassId && cm.UserId == teacherId && cm.Role == "Teacher");
+    }
+
+    public async Task<List<Submission>> GetStudentCourseSubmissionsAsync(int courseId, int studentId)
+    {
+        // Get all assignments for the course
+        var assignments = await _context.Assignments
+            .Where(a => a.ClassId == courseId && !a.IsDeleted)
+            .ToListAsync();
+
+        if (!assignments.Any())
+        {
+            return new List<Submission>();
+        }
+
+        // Get all submissions for these assignments by the student
+        var assignmentIds = assignments.Select(a => a.AssignmentId).ToList();
+
+        return await _context.Submissions
+            .Where(s => assignmentIds.Contains(s.AssignmentId) && s.UserId == studentId)
+            .Include(s => s.Assignment)
+            .Include(s => s.User)
+            .ToListAsync();
+    }
+
+    public async Task<List<Submission>> GetCourseSubmissionsAsync(int courseId)
+    {
+        // Get all assignments for the course
+        var assignments = await _context.Assignments
+            .Where(a => a.ClassId == courseId && !a.IsDeleted)
+            .ToListAsync();
+
+        if (!assignments.Any())
+        {
+            return new List<Submission>();
+        }
+
+        // Get all submissions for these assignments
+        var assignmentIds = assignments.Select(a => a.AssignmentId).ToList();
+
+        return await _context.Submissions
+            .Where(s => assignmentIds.Contains(s.AssignmentId))
+            .Include(s => s.Assignment)
+            .Include(s => s.User)
+            .ToListAsync();
     }
 }

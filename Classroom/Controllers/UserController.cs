@@ -1,6 +1,7 @@
 using Classroom.Dtos;
 using Classroom.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -40,7 +41,7 @@ public class UserController : ControllerBase
 
         if (currentUserId != id && userRole != "Teacher")
         {
-            return Forbid();
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not authorized to access this user's data" });
         }
 
         var user = await _userService.GetUserByIdAsync(id);
@@ -69,7 +70,7 @@ public class UserController : ControllerBase
 
         if (currentUserId != id && userRole != "Teacher")
         {
-            return Forbid();
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "You are not authorized to update this user's data" });
         }
 
         // Prevent non-teachers from changing roles

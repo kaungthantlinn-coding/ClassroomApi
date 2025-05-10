@@ -13,6 +13,7 @@ public class CourseDto
     public string EnrollmentCode { get; set; } = string.Empty;
     public string? Subject { get; set; }
     public string? Room { get; set; }
+    public string? ThemeColor { get; set; }
 }
 
 public class CreateCourseDto

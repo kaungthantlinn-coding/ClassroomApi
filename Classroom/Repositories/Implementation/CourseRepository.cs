@@ -121,6 +121,12 @@ public class CourseRepository : ICourseRepository
             .ToListAsync();
     }
 
+    public async Task<Course?> GetByEnrollmentCodeAsync(string enrollmentCode)
+    {
+        return await _context.Courses
+            .FirstOrDefaultAsync(c => c.EnrollmentCode == enrollmentCode && !c.IsDeleted);
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();

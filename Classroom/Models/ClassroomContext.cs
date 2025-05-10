@@ -164,6 +164,7 @@ public partial class ClassroomContext : DbContext
             entity.Property(e => e.Section).HasMaxLength(50);
             entity.Property(e => e.Subject).HasMaxLength(100);
             entity.Property(e => e.TeacherName).HasMaxLength(100);
+            entity.Property(e => e.ThemeColor).HasMaxLength(20);
         });
 
         modelBuilder.Entity<CourseMember>(entity =>
@@ -236,6 +237,7 @@ public partial class ClassroomContext : DbContext
             entity.Property(e => e.Grade).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.GradedDate).HasColumnType("datetime");
             entity.Property(e => e.SubmittedAt).HasColumnType("datetime");
+            entity.Property(e => e.Content).HasColumnType("nvarchar(max)");
 
             entity.HasOne(d => d.Assignment).WithMany(p => p.Submissions)
                 .HasForeignKey(d => d.AssignmentId)

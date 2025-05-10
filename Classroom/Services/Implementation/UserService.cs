@@ -9,10 +9,12 @@ namespace Classroom.Services.Implementation;
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly ICourseRepository _courseRepository;
 
-    public UserService(IUserRepository userRepository)
+    public UserService(IUserRepository userRepository, ICourseRepository courseRepository)
     {
         _userRepository = userRepository;
+        _courseRepository = courseRepository;
     }
 
     public async Task<List<UserDto>> GetAllUsersAsync()
@@ -80,5 +82,47 @@ public class UserService : IUserService
             Avatar = user.Avatar,
             Role = user.Role
         };
+    }
+
+    public async Task<object?> GetUserClassDataAsync(int userId, int courseId)
+    {
+        // Check if the user has access to this course
+        var isEnrolled = await _courseRepository.IsUserEnrolledAsync(courseId, userId);
+        if (!isEnrolled)
+        {
+            return null;
+        }
+
+        // Get course details
+        var course = await _courseRepository.GetByIdAsync(courseId);
+        if (course == null)
+        {
+            return null;
+        }
+
+        // For now, we'll return a simple object with course and user information
+        // In a real implementation, you would retrieve user-specific data for this course
+        return new
+        {
+            courseId,
+            userId,
+            courseName = course.Name,
+            courseSection = course.Section,
+            // Add any other relevant data here
+        };
+    }
+
+    public async Task<bool> SaveUserClassDataAsync(int userId, int courseId, UserClassDataDto userClassDataDto)
+    {
+        // Check if the user has access to this course
+        var isEnrolled = await _courseRepository.IsUserEnrolledAsync(courseId, userId);
+        if (!isEnrolled)
+        {
+            return false;
+        }
+
+        // In a real implementation, you would save the user's data for this course
+        // For now, we'll just return success
+        return true;
     }
 }

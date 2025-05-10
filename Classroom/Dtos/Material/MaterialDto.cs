@@ -20,7 +20,7 @@ public class MaterialDto
 
 public class CreateMaterialDto
 {
-    public string Title { get; set; } = null!;
+    public string? Title { get; set; }
     public string? Description { get; set; }
     public string? Topic { get; set; }
     public string? ScheduledFor { get; set; }
@@ -29,7 +29,7 @@ public class CreateMaterialDto
 
 public class UpdateMaterialDto
 {
-    public string Title { get; set; } = null!;
+    public string? Title { get; set; }
     public string? Description { get; set; }
     public string? Topic { get; set; }
     public string? ScheduledFor { get; set; }

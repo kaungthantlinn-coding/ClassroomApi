@@ -34,10 +34,7 @@ public class AssignmentController : ControllerBase
     [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> CreateAssignment(int courseId, [FromBody] CreateAssignmentDto createAssignmentDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
+        // Validation removed as requested
 
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
 
@@ -77,10 +74,7 @@ public class AssignmentController : ControllerBase
     [HttpPut("assignments/{id}")]
     public async Task<IActionResult> UpdateAssignment(int id, [FromBody] UpdateAssignmentDto updateAssignmentDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
+        // Validation removed as requested
 
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
         var assignment = await _assignmentService.UpdateAssignmentAsync(id, updateAssignmentDto, currentUserId);
@@ -99,13 +93,21 @@ public class AssignmentController : ControllerBase
     public async Task<IActionResult> DeleteAssignment(int id)
     {
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var result = await _assignmentService.DeleteAssignmentAsync(id, currentUserId);
 
-        if (!result)
+        try
         {
-            return NotFound(new { message = "Assignment not found or you are not authorized to delete it" });
-        }
+            var result = await _assignmentService.DeleteAssignmentAsync(id, currentUserId);
 
-        return NoContent();
+            if (!result)
+            {
+                return NotFound(new { message = "Assignment not found or you are not authorized to delete it" });
+            }
+
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 }
