@@ -19,6 +19,7 @@ public class SubmissionRepository : ISubmissionRepository
             .Where(s => s.AssignmentId == assignmentId)
             .Include(s => s.User)
             .Include(s => s.Assignment)
+            .Include(s => s.SubmissionAttachments)
             .OrderByDescending(s => s.SubmittedAt)
             .ToListAsync();
     }
@@ -28,6 +29,7 @@ public class SubmissionRepository : ISubmissionRepository
         return await _context.Submissions
             .Include(s => s.User)
             .Include(s => s.Assignment)
+            .Include(s => s.SubmissionAttachments)
             .FirstOrDefaultAsync(s => s.SubmissionId == submissionId);
     }
 

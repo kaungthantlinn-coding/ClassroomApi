@@ -13,6 +13,7 @@ public class SubmissionDto
     public bool Graded { get; set; }
     public DateTime? GradedDate { get; set; }
     public string? SubmissionContent { get; set; }
+    public List<SubmissionFileResponseDto> Files { get; set; } = new List<SubmissionFileResponseDto>();
 }
 
 public class CreateSubmissionDto

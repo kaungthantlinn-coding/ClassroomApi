@@ -39,6 +39,8 @@ public partial class ClassroomContext : DbContext
 
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
+    public virtual DbSet<SubmissionAttachment> SubmissionAttachments { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer("Server=.;Database=Classroom;Trusted_Connection=True;TrustServerCertificate=True;");
@@ -246,6 +248,20 @@ public partial class ClassroomContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.Submissions)
                 .HasForeignKey(d => d.UserId)
                 .HasConstraintName("FK__Submissio__UserI__6383C8BA");
+        });
+
+        modelBuilder.Entity<SubmissionAttachment>(entity =>
+        {
+            entity.HasKey(e => e.AttachmentId).HasName("PK__SubmissionA__442C64BE8159921D");
+
+            entity.Property(e => e.Name).HasMaxLength(100);
+            entity.Property(e => e.Type).HasMaxLength(20);
+            entity.Property(e => e.UploadDate).HasColumnType("datetime");
+            entity.Property(e => e.Url).HasMaxLength(255);
+
+            entity.HasOne(d => d.Submission).WithMany(p => p.SubmissionAttachments)
+                .HasForeignKey(d => d.SubmissionId)
+                .HasConstraintName("FK__SubmissionA__SubmissionId__5BE2A6F2");
         });
 
         modelBuilder.Entity<User>(entity =>

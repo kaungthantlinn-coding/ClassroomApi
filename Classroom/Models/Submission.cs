@@ -26,4 +26,6 @@ public partial class Submission
     public virtual Assignment Assignment { get; set; } = null!;
 
     public virtual User User { get; set; } = null!;
+
+    public virtual ICollection<SubmissionAttachment> SubmissionAttachments { get; set; } = new List<SubmissionAttachment>();
 }

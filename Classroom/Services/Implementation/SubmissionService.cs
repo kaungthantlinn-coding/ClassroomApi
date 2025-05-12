@@ -3,6 +3,7 @@ using Classroom.Dtos.Grade;
 using Classroom.Models;
 using Classroom.Repositories.Interface;
 using Classroom.Services.Interface;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
 namespace Classroom.Services.Implementation;
@@ -12,15 +13,18 @@ public class SubmissionService : ISubmissionService
     private readonly ISubmissionRepository _submissionRepository;
     private readonly IAssignmentRepository _assignmentRepository;
     private readonly ICourseRepository _courseRepository;
+    private readonly ClassroomContext _context;
 
     public SubmissionService(
         ISubmissionRepository submissionRepository,
         IAssignmentRepository assignmentRepository,
-        ICourseRepository courseRepository)
+        ICourseRepository courseRepository,
+        ClassroomContext context)
     {
         _submissionRepository = submissionRepository;
         _assignmentRepository = assignmentRepository;
         _courseRepository = courseRepository;
+        _context = context;
     }
 
     public async Task<List<SubmissionDto>> GetAssignmentSubmissionsAsync(int assignmentId, int teacherId)
@@ -33,20 +37,41 @@ public class SubmissionService : ISubmissionService
         }
 
         var submissions = await _submissionRepository.GetAssignmentSubmissionsAsync(assignmentId);
-        return submissions.Select(s => new SubmissionDto
+        var result = new List<SubmissionDto>();
+
+        foreach (var s in submissions)
         {
-            SubmissionId = s.SubmissionId,
-            AssignmentId = s.AssignmentId,
-            AssignmentTitle = s.Assignment.Title,
-            UserId = s.UserId,
-            UserName = s.User.Name,
-            SubmittedAt = s.SubmittedAt,
-            Grade = s.Grade,
-            Feedback = s.Feedback,
-            Graded = s.Graded ?? false,
-            GradedDate = s.GradedDate,
-            SubmissionContent = s.Content
-        }).ToList();
+            // Debug: Log the submission ID and number of attachments found
+            Console.WriteLine($"Submission ID: {s.SubmissionId}, Attachments found: {s.SubmissionAttachments.Count}");
+
+            var submissionDto = new SubmissionDto
+            {
+                SubmissionId = s.SubmissionId,
+                AssignmentId = s.AssignmentId,
+                AssignmentTitle = s.Assignment.Title,
+                UserId = s.UserId,
+                UserName = s.User.Name,
+                SubmittedAt = s.SubmittedAt,
+                Grade = s.Grade,
+                Feedback = s.Feedback,
+                Graded = s.Graded ?? false,
+                GradedDate = s.GradedDate,
+                SubmissionContent = s.Content,
+                Files = s.SubmissionAttachments.Select(a => new SubmissionFileResponseDto
+                {
+                    AttachmentId = a.AttachmentId,
+                    Name = a.Name,
+                    Type = a.Type,
+                    Size = a.Size ?? 0,
+                    Url = a.Url,
+                    UploadDate = a.UploadDate ?? DateTime.UtcNow
+                }).ToList()
+            };
+
+            result.Add(submissionDto);
+        }
+
+        return result;
     }
 
     public async Task<SubmissionDto?> GetSubmissionByIdAsync(int submissionId, int userId)
@@ -79,7 +104,16 @@ public class SubmissionService : ISubmissionService
             Feedback = submission.Feedback,
             Graded = submission.Graded ?? false,
             GradedDate = submission.GradedDate,
-            SubmissionContent = submission.Content
+            SubmissionContent = submission.Content,
+            Files = submission.SubmissionAttachments.Select(a => new SubmissionFileResponseDto
+            {
+                AttachmentId = a.AttachmentId,
+                Name = a.Name,
+                Type = a.Type,
+                Size = a.Size ?? 0,
+                Url = a.Url,
+                UploadDate = a.UploadDate ?? DateTime.UtcNow
+            }).ToList()
         };
     }
 
@@ -126,7 +160,16 @@ public class SubmissionService : ISubmissionService
             Feedback = submissionWithDetails.Feedback,
             Graded = submissionWithDetails.Graded ?? false,
             GradedDate = submissionWithDetails.GradedDate,
-            SubmissionContent = submissionWithDetails.Content
+            SubmissionContent = submissionWithDetails.Content,
+            Files = submissionWithDetails.SubmissionAttachments.Select(a => new SubmissionFileResponseDto
+            {
+                AttachmentId = a.AttachmentId,
+                Name = a.Name,
+                Type = a.Type,
+                Size = a.Size ?? 0,
+                Url = a.Url,
+                UploadDate = a.UploadDate ?? DateTime.UtcNow
+            }).ToList()
         };
     }
 
@@ -165,7 +208,16 @@ public class SubmissionService : ISubmissionService
             Feedback = updatedSubmission.Feedback,
             Graded = updatedSubmission.Graded ?? false,
             GradedDate = updatedSubmission.GradedDate,
-            SubmissionContent = updatedSubmission.Content
+            SubmissionContent = updatedSubmission.Content,
+            Files = updatedSubmission.SubmissionAttachments.Select(a => new SubmissionFileResponseDto
+            {
+                AttachmentId = a.AttachmentId,
+                Name = a.Name,
+                Type = a.Type,
+                Size = a.Size ?? 0,
+                Url = a.Url,
+                UploadDate = a.UploadDate ?? DateTime.UtcNow
+            }).ToList()
         };
     }
 
@@ -202,7 +254,16 @@ public class SubmissionService : ISubmissionService
             Feedback = updatedSubmission.Feedback,
             Graded = updatedSubmission.Graded ?? false,
             GradedDate = updatedSubmission.GradedDate,
-            SubmissionContent = updatedSubmission.Content
+            SubmissionContent = updatedSubmission.Content,
+            Files = updatedSubmission.SubmissionAttachments.Select(a => new SubmissionFileResponseDto
+            {
+                AttachmentId = a.AttachmentId,
+                Name = a.Name,
+                Type = a.Type,
+                Size = a.Size ?? 0,
+                Url = a.Url,
+                UploadDate = a.UploadDate ?? DateTime.UtcNow
+            }).ToList()
         };
     }
 
@@ -246,7 +307,8 @@ public class SubmissionService : ISubmissionService
                 Feedback = null,
                 Graded = false,
                 GradedDate = null,
-                SubmissionContent = null
+                SubmissionContent = null,
+                Files = new List<SubmissionFileResponseDto>()
             };
         }
 
@@ -273,7 +335,16 @@ public class SubmissionService : ISubmissionService
             Feedback = updatedSubmission.Feedback,
             Graded = updatedSubmission.Graded ?? false,
             GradedDate = updatedSubmission.GradedDate,
-            SubmissionContent = updatedSubmission.Content
+            SubmissionContent = updatedSubmission.Content,
+            Files = updatedSubmission.SubmissionAttachments.Select(a => new SubmissionFileResponseDto
+            {
+                AttachmentId = a.AttachmentId,
+                Name = a.Name,
+                Type = a.Type,
+                Size = a.Size ?? 0,
+                Url = a.Url,
+                UploadDate = a.UploadDate ?? DateTime.UtcNow
+            }).ToList()
         };
     }
 

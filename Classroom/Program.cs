@@ -21,6 +21,7 @@ using Classroom.Configuration;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -36,6 +37,13 @@ namespace Classroom
 
             // Add services to the container.
             builder.Services.AddControllers();
+
+            // Configure file upload settings
+            builder.Services.Configure<FormOptions>(options =>
+            {
+                // Set the limit to 50 MB
+                options.MultipartBodyLengthLimit = 52428800;
+            });
 
             // Configure CORS for React app
             CorsConfiguration.ConfigureCors(builder.Services);
@@ -109,9 +117,16 @@ namespace Classroom
                     provider.GetRequiredService<ICourseRepository>(),
                     provider.GetRequiredService<IUserRepository>()
                 ));
-            builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+            builder.Services.AddScoped<ISubmissionService>(provider =>
+                new SubmissionService(
+                    provider.GetRequiredService<ISubmissionRepository>(),
+                    provider.GetRequiredService<IAssignmentRepository>(),
+                    provider.GetRequiredService<ICourseRepository>(),
+                    provider.GetRequiredService<ClassroomContext>()
+                ));
             builder.Services.AddScoped<ICommentService, CommentService>();
             builder.Services.AddScoped<IValidationService, ValidationService>();
+            builder.Services.AddScoped<IFileService, FileService>();
 
             // Register FluentValidation but disable automatic validation for assignments and materials
             builder.Services.AddFluentValidationClientsideAdapters();
