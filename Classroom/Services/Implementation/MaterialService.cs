@@ -3,6 +3,7 @@ using Classroom.Helpers;
 using Classroom.Models;
 using Classroom.Repositories.Interface;
 using Classroom.Services.Interface;
+using Microsoft.EntityFrameworkCore;
 
 namespace Classroom.Services.Implementation;
 
@@ -136,9 +137,9 @@ public class MaterialService(IMaterialRepository materialRepository, ICourseRepo
         return true;
     }
 
-    private static MaterialDto MapMaterialToDto(Material material)
+    private MaterialDto MapMaterialToDto(Material material)
     {
-        return new MaterialDto
+        var materialDto = new MaterialDto
         {
             MaterialId = material.MaterialId,
             MaterialGuid = material.MaterialGuid,
@@ -153,5 +154,29 @@ public class MaterialService(IMaterialRepository materialRepository, ICourseRepo
             UpdatedAt = material.UpdatedAt,
             Color = material.Color
         };
+
+        // Include file attachments if available
+        if (material.MaterialAttachments != null && material.MaterialAttachments.Any())
+        {
+            // Map all attachments to the Files collection
+            materialDto.Files = material.MaterialAttachments.Select(attachment => new MaterialFileInfo
+            {
+                AttachmentId = attachment.AttachmentId,
+                Name = attachment.Name,
+                Type = attachment.Type,
+                Url = attachment.Url,
+                // These properties might not be available in MaterialAttachment
+                Size = 0, // Default value since MaterialAttachment might not have Size
+                UploadDate = DateTime.UtcNow // Default value since MaterialAttachment might not have UploadDate
+            }).ToList();
+
+            // Set the first attachment as the main file for backward compatibility
+            if (materialDto.Files.Count > 0)
+            {
+                materialDto.File = materialDto.Files[0];
+            }
+        }
+
+        return materialDto;
     }
 }

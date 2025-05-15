@@ -11,6 +11,8 @@ public interface ISubmissionService
     Task<SubmissionDto?> GradeSubmissionAsync(int submissionId, GradeSubmissionDto gradeSubmissionDto, int teacherId);
     Task<SubmissionDto?> AddFeedbackAsync(int submissionId, FeedbackSubmissionDto feedbackSubmissionDto, int teacherId);
     Task<SubmissionDto?> UnsubmitSubmissionAsync(int submissionId, int studentId);
+    Task<SubmissionDto?> GetExistingSubmissionAsync(int assignmentId, int userId);
+    Task<int> PurgeSubmissionsAsync(int assignmentId, int studentId, int requestingUserId);
 
     // Grade page related methods
     Task<GradePageDto> GetCourseGradePageAsync(int courseId, int teacherId);

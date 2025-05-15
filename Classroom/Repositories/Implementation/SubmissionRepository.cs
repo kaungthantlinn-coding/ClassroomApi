@@ -35,9 +35,40 @@ public class SubmissionRepository : ISubmissionRepository
 
     public async Task<Submission> CreateSubmissionAsync(Submission submission)
     {
-        _context.Submissions.Add(submission);
-        await _context.SaveChangesAsync();
-        return submission;
+        // Use ExecutionStrategy to handle potential transient errors
+        return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            // Use a transaction to ensure consistency
+            using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);
+
+            try
+            {
+                // Check if a submission already exists for this assignment and user
+                var existingSubmission = await _context.Submissions
+                    .Where(s => s.AssignmentId == submission.AssignmentId && s.UserId == submission.UserId)
+                    .OrderByDescending(s => s.SubmittedAt)
+                    .FirstOrDefaultAsync();
+
+                if (existingSubmission != null)
+                {
+                    // Return the existing submission instead of creating a new one
+                    await transaction.CommitAsync();
+                    return existingSubmission;
+                }
+
+                // Create a new submission if none exists
+                _context.Submissions.Add(submission);
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+                return submission;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        });
     }
 
     public async Task<Submission?> UpdateSubmissionAsync(Submission submission)
@@ -132,5 +163,34 @@ public class SubmissionRepository : ISubmissionRepository
             .Include(s => s.Assignment)
             .Include(s => s.User)
             .ToListAsync();
+    }
+
+    public async Task<Submission?> GetExistingSubmissionAsync(int assignmentId, int userId)
+    {
+        // Use ExecutionStrategy to handle potential transient errors
+        return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            // Use a transaction to ensure consistency
+            using var transaction = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.RepeatableRead);
+
+            try
+            {
+                var submission = await _context.Submissions
+                    .Where(s => s.AssignmentId == assignmentId && s.UserId == userId)
+                    .Include(s => s.SubmissionAttachments)
+                    .Include(s => s.Assignment)
+                    .Include(s => s.User)
+                    .OrderByDescending(s => s.SubmittedAt)
+                    .FirstOrDefaultAsync();
+
+                await transaction.CommitAsync();
+                return submission;
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        });
     }
 }

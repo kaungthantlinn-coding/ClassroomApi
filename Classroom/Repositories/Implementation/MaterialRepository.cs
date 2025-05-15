@@ -16,6 +16,7 @@ public class MaterialRepository : IMaterialRepository
     public async Task<List<Material>> GetMaterialsByCourseIdAsync(int courseId)
     {
         return await _context.Materials
+            .Include(m => m.MaterialAttachments) // Include material attachments
             .Where(m => m.ClassId == courseId && !m.IsDeleted)
             .OrderByDescending(m => m.CreatedAt)
             .ToListAsync();
@@ -25,6 +26,7 @@ public class MaterialRepository : IMaterialRepository
     {
         return await _context.Materials
             .Include(m => m.Class)
+            .Include(m => m.MaterialAttachments) // Include material attachments
             .FirstOrDefaultAsync(m => m.MaterialId == materialId && !m.IsDeleted);
     }
 

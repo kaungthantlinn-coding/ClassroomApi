@@ -3,6 +3,7 @@ using Classroom.Dtos.Grade;
 using Classroom.Models;
 using Classroom.Repositories.Interface;
 using Classroom.Services.Interface;
+using Classroom.Extensions;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 
@@ -451,10 +452,115 @@ public class SubmissionService : ISubmissionService
         };
     }
 
+    public async Task<SubmissionDto?> GetExistingSubmissionAsync(int assignmentId, int userId)
+    {
+        // Check if the user already has a submission for this assignment
+        var existingSubmission = await _submissionRepository.GetExistingSubmissionAsync(assignmentId, userId);
+
+        if (existingSubmission == null)
+        {
+            return null;
+        }
+
+        // Map to DTO
+        return new SubmissionDto
+        {
+            SubmissionId = existingSubmission.SubmissionId,
+            AssignmentId = existingSubmission.AssignmentId,
+            AssignmentTitle = existingSubmission.Assignment.Title,
+            UserId = existingSubmission.UserId,
+            UserName = existingSubmission.User.Name,
+            SubmittedAt = existingSubmission.SubmittedAt,
+            Grade = existingSubmission.Grade,
+            Feedback = existingSubmission.Feedback,
+            Graded = existingSubmission.Graded ?? false,
+            GradedDate = existingSubmission.GradedDate,
+            SubmissionContent = existingSubmission.Content,
+            Files = existingSubmission.SubmissionAttachments.Select(a => new SubmissionFileResponseDto
+            {
+                AttachmentId = a.AttachmentId,
+                Name = a.Name,
+                Type = a.Type,
+                Size = a.Size ?? 0,
+                Url = a.Url,
+                UploadDate = a.UploadDate ?? DateTime.UtcNow
+            }).ToList()
+        };
+    }
+
+    public async Task<int> PurgeSubmissionsAsync(int assignmentId, int studentId, int requestingUserId)
+    {
+        // Verify assignment exists
+        var assignment = await _assignmentRepository.GetByIdAsync(assignmentId);
+        if (assignment == null)
+        {
+            throw new KeyNotFoundException($"Assignment with ID {assignmentId} not found");
+        }
+
+        // Check authorization
+        bool isAuthorized = false;
+
+        // If the requesting user is the student, check if they're enrolled
+        if (requestingUserId == studentId)
+        {
+            isAuthorized = await _submissionRepository.IsUserAssignedToAssignmentAsync(studentId, assignmentId);
+        }
+        // If the requesting user is a teacher, check if they have access to the assignment
+        else
+        {
+            isAuthorized = await _submissionRepository.IsTeacherForAssignmentAsync(requestingUserId, assignmentId);
+        }
+
+        if (!isAuthorized)
+        {
+            throw new UnauthorizedAccessException("You are not authorized to purge submissions for this assignment");
+        }
+
+        // Get all submissions for this student on this assignment
+        var submissions = await _context.Submissions
+            .Include(s => s.SubmissionAttachments)
+            .Where(s => s.AssignmentId == assignmentId && s.UserId == studentId)
+            .ToListAsync();
+
+        int purgedCount = 0;
+
+        foreach (var submission in submissions)
+        {
+            // Delete all attachments for this submission
+            foreach (var attachment in submission.SubmissionAttachments.ToList())
+            {
+                // Extract the filename from the URL
+                var urlParts = attachment.Url.Split('/');
+                var filename = urlParts[urlParts.Length - 1];
+                var physicalPath = Path.Combine(_context.GetUploadsDirectory(), filename);
+
+                // Delete the physical file if it exists
+                if (File.Exists(physicalPath))
+                {
+                    File.Delete(physicalPath);
+                }
+
+                // Remove from database
+                _context.SubmissionAttachments.Remove(attachment);
+            }
+
+            // Delete the submission
+            _context.Submissions.Remove(submission);
+            purgedCount++;
+        }
+
+        await _context.SaveChangesAsync();
+        return purgedCount;
+    }
+
     public async Task<StudentGradeDto?> GetStudentGradeDataAsync(int courseId, int studentId)
     {
+        Console.WriteLine($"GetStudentGradeDataAsync called with courseId: {courseId}, studentId: {studentId}");
+
         // Verify student is enrolled in the course
         var isEnrolled = await _courseRepository.IsUserEnrolledAsync(courseId, studentId);
+        Console.WriteLine($"Student enrolled: {isEnrolled}");
+
         if (!isEnrolled)
         {
             throw new UnauthorizedAccessException("You are not enrolled in this course");
@@ -462,6 +568,8 @@ public class SubmissionService : ISubmissionService
 
         // Get course details
         var course = await _courseRepository.GetByIdAsync(courseId);
+        Console.WriteLine($"Course found: {course != null}");
+
         if (course == null)
         {
             throw new KeyNotFoundException($"Course with ID {courseId} not found");
@@ -521,7 +629,20 @@ public class SubmissionService : ISubmissionService
         // Final grade is just the assignment average for now
         decimal finalGrade = assignmentAverage;
 
-        return new StudentGradeDto
+        Console.WriteLine($"Grade calculation - totalGrade: {totalGrade}, gradedCount: {gradedCount}, assignmentAverage: {assignmentAverage}");
+        Console.WriteLine($"Assignments count: {assignments.Count}, Submissions count: {submissions.Count}");
+
+        foreach (var assignment in assignments)
+        {
+            Console.WriteLine($"Assignment: {assignment.AssignmentId} - {assignment.Title}");
+        }
+
+        foreach (var submission in submissions)
+        {
+            Console.WriteLine($"Submission: {submission.SubmissionId} for Assignment: {submission.AssignmentId}, Grade: {submission.Grade}, Graded: {submission.Graded}");
+        }
+
+        var result = new StudentGradeDto
         {
             UserId = studentId,
             Name = student.User.Name,
@@ -531,6 +652,10 @@ public class SubmissionService : ISubmissionService
             FinalGrade = finalGrade,
             AssignmentGrades = assignmentGrades
         };
+
+        Console.WriteLine($"Returning StudentGradeDto with FinalGrade: {result.FinalGrade}");
+
+        return result;
     }
 
     private ClassMetricsDto CalculateClassMetrics(List<StudentGradeDto> studentGrades)

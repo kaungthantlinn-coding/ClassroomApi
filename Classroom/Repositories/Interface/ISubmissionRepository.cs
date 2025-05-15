@@ -11,6 +11,7 @@ public interface ISubmissionRepository
     Task<bool> DeleteSubmissionAsync(int submissionId);
     Task<bool> IsUserAssignedToAssignmentAsync(int userId, int assignmentId);
     Task<bool> IsTeacherForAssignmentAsync(int teacherId, int assignmentId);
+    Task<Submission?> GetExistingSubmissionAsync(int assignmentId, int userId);
 
     // Grade page related methods
     Task<List<Submission>> GetStudentCourseSubmissionsAsync(int courseId, int studentId);

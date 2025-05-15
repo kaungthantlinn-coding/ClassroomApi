@@ -163,4 +163,42 @@ public class SubmissionController : ControllerBase
             return BadRequest(ex.Message);
         }
     }
+
+    // DELETE: api/assignments/{assignmentId}/submissions/purge
+    // Purge all submissions for an assignment (student can purge their own, teacher can purge any)
+    [HttpDelete("assignments/{assignmentId}/submissions/purge")]
+    public async Task<IActionResult> PurgeSubmissions(int assignmentId, [FromQuery] int? studentId = null)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        // If studentId is not provided, use the current user's ID
+        int targetStudentId = studentId ?? currentUserId;
+
+        // Students can only purge their own submissions
+        if (userRole == "Student" && targetStudentId != currentUserId)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "You can only purge your own submissions" });
+        }
+
+        // Teachers can purge any student's submissions
+        if (userRole != "Teacher" && targetStudentId != currentUserId)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "You don't have permission to purge other students' submissions" });
+        }
+
+        try
+        {
+            var result = await _submissionService.PurgeSubmissionsAsync(assignmentId, targetStudentId, currentUserId);
+            return Ok(new { success = true, message = "Submissions purged successfully", purgedCount = result });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
 }
