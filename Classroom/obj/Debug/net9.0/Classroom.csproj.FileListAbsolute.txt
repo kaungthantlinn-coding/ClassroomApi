@@ -172,3 +172,4 @@ D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\refint\Classroom.dll
 D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\Classroom.pdb
 D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\Classroom.genruntimeconfig.cache
 D:\ApiClassroom\Classroom\Classroom\obj\Debug\net9.0\ref\Classroom.dll
+D:\ApiClassroom\Classroom\Classroom\bin\Debug\net9.0\Newtonsoft.Json.dll

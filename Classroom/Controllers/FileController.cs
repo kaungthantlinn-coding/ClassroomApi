@@ -1,5 +1,7 @@
 using Classroom.Dtos.Material;
+using Classroom.Dtos.Notification;
 using Classroom.Dtos.Submission;
+using Classroom.Models;
 using Classroom.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,17 +20,29 @@ public class FileController : ControllerBase
     private readonly IFileService _fileService;
     private readonly ISubmissionService _submissionService;
     private readonly IMaterialService _materialService;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<FileController> _logger;
+    private readonly ClassroomContext _context;
     private readonly string[] _allowedFileExtensions = { ".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".txt", ".jpg", ".jpeg", ".png", ".gif", ".zip" };
     private readonly long _maxFileSize = 50 * 1024 * 1024; // 50 MB
 
     // Static lock object to ensure thread safety across multiple requests
     private static readonly object _submissionLock = new object();
 
-    public FileController(IFileService fileService, ISubmissionService submissionService, IMaterialService materialService)
+    public FileController(
+        IFileService fileService,
+        ISubmissionService submissionService,
+        IMaterialService materialService,
+        INotificationService notificationService,
+        ILogger<FileController> logger,
+        ClassroomContext context)
     {
         _fileService = fileService;
         _submissionService = submissionService;
         _materialService = materialService;
+        _notificationService = notificationService;
+        _logger = logger;
+        _context = context;
     }
 
     /// <summary>
@@ -126,6 +140,43 @@ public class FileController : ControllerBase
             // Save the file
             var attachment = await _fileService.SaveSubmissionFileAsync(file, submissionId.Value, fileId);
 
+            try
+            {
+                // Get the actual submission model from the database
+                var submissionModel = await _context.Submissions.FindAsync(submissionId.Value);
+                if (submissionModel != null)
+                {
+                    // Get the assignment details
+                    var assignment = await _context.Assignments.FindAsync(submissionModel.AssignmentId);
+                    if (assignment != null)
+                    {
+                        // Get the course details
+                        var course = await _context.Courses.FindAsync(assignment.ClassId);
+                        if (course != null)
+                        {
+                            // Get the student details
+                            var student = await _context.Users.FindAsync(currentUserId);
+                            if (student != null)
+                            {
+                                // Send notification to teachers
+                                await _notificationService.SendSubmissionNotificationAsync(
+                                    submissionModel,
+                                    assignment,
+                                    student,
+                                    course);
+
+                                _logger.LogInformation($"Sent file upload notification for submission {submissionModel.SubmissionId} by student {student.Name}");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't fail the file upload
+                _logger.LogError(ex, $"Failed to send notification for file upload to submission {submissionId.Value}");
+            }
+
             // Return the file information
             return Ok(new SubmissionFilesResponseDto
             {
@@ -185,6 +236,67 @@ public class FileController : ControllerBase
             if (submission == null)
             {
                 return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "You don't have permission to access this file" });
+            }
+
+            // Get the file stream
+            var fileStream = await _fileService.GetSubmissionFileStreamAsync(fileId);
+
+            // Return the file
+            return File(fileStream, attachment.Type, attachment.Name);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (FileNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = $"Error downloading file: {ex.Message}" });
+        }
+    }
+
+    /// <summary>
+    /// Downloads a submission file by submission ID and file ID
+    /// </summary>
+    /// <param name="submissionId">The ID of the submission</param>
+    /// <param name="fileId">The ID of the file to download</param>
+    /// <returns>The file stream</returns>
+    /// <response code="200">Returns the file if found and user has access</response>
+    /// <response code="403">If the user doesn't have permission to access this file</response>
+    /// <response code="404">If the file or submission is not found</response>
+    /// <response code="500">If there's a server error during download</response>
+    [HttpGet("submissions/{submissionId}/files/{fileId}")]
+    public async Task<IActionResult> DownloadSubmissionFileBySubmission(int submissionId, int fileId)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+        try
+        {
+            // First check if the user has access to the submission
+            var submission = await _submissionService.GetSubmissionByIdAsync(submissionId, currentUserId);
+            if (submission == null)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "You don't have permission to access this submission" });
+            }
+
+            // Then check if the file exists and belongs to this submission
+            var attachment = await _fileService.GetSubmissionFileByIdAsync(fileId);
+            if (attachment == null)
+            {
+                return NotFound(new { success = false, message = $"File with ID {fileId} not found" });
+            }
+
+            // Verify the file belongs to the requested submission
+            if (attachment.SubmissionId != submissionId)
+            {
+                return NotFound(new { success = false, message = $"File with ID {fileId} does not belong to submission {submissionId}" });
             }
 
             // Get the file stream

@@ -142,6 +142,53 @@ public class AssignmentService : IAssignmentService
         return true;
     }
 
+    public async Task<List<CalendarAssignmentDto>> GetCalendarAssignmentsAsync(string startDate, string endDate, int userId)
+    {
+        // Get all courses the user is enrolled in
+        var userCourses = await _courseRepository.GetCoursesByUserIdAsync(userId);
+        if (!userCourses.Any())
+        {
+            return new List<CalendarAssignmentDto>(); // Return empty list if user is not enrolled in any courses
+        }
+
+        var result = new List<CalendarAssignmentDto>();
+
+        // For each course, get assignments and filter by date
+        foreach (var course in userCourses)
+        {
+            var assignments = await _assignmentRepository.GetAssignmentsByCourseIdAsync(course.CourseId);
+
+            // Filter assignments by date range if dates are provided
+            if (!string.IsNullOrEmpty(startDate) && !string.IsNullOrEmpty(endDate))
+            {
+                assignments = assignments.Where(a =>
+                    !string.IsNullOrEmpty(a.DueDate) &&
+                    string.Compare(a.DueDate, startDate) >= 0 &&
+                    string.Compare(a.DueDate, endDate) <= 0
+                ).ToList();
+            }
+
+            // Map assignments to calendar DTOs and add to result
+            result.AddRange(assignments.Select(MapAssignmentToCalendarDto));
+        }
+
+        return result;
+    }
+
+    private static CalendarAssignmentDto MapAssignmentToCalendarDto(Assignment assignment)
+    {
+        return new CalendarAssignmentDto
+        {
+            AssignmentId = assignment.AssignmentId,
+            Title = assignment.Title,
+            DueDate = assignment.DueDate,
+            DueTime = assignment.DueTime,
+            CourseId = assignment.ClassId ?? 0,
+            CourseName = assignment.ClassName ?? "Unknown Course",
+            Status = assignment.Status
+        };
+    }
+
     private static AssignmentDto MapAssignmentToDto(Assignment assignment)
     {
         return new AssignmentDto

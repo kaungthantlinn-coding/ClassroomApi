@@ -467,6 +467,23 @@ public class CourseService(ICourseRepository courseRepository) : ICourseService
         };
     }
 
+    public async Task<CourseDto?> GetCourseByEnrollmentCodeAsync(string enrollmentCode)
+    {
+        // Find course by enrollment code
+        var course = await _courseRepository.GetByEnrollmentCodeAsync(enrollmentCode);
+        if (course == null)
+        {
+            return null; // Course not found with this enrollment code
+        }
+
+        return MapCourseToDto(course);
+    }
+
+    public async Task<bool> IsUserEnrolledAsync(int courseId, int userId)
+    {
+        return await _courseRepository.IsUserEnrolledAsync(courseId, userId);
+    }
+
     public async Task<bool> UpdateCourseThemeAsync(CourseThemeDto themeDto, int userId)
     {
         try

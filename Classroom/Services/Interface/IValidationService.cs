@@ -2,6 +2,7 @@ using Classroom.Dtos;
 using Classroom.Dtos.Announcement;
 using Classroom.Dtos.Assignment;
 using Classroom.Dtos.Course;
+using Classroom.Dtos.Email;
 using Classroom.Dtos.Material;
 using Classroom.Dtos.Submission;
 using FluentValidation;
@@ -42,6 +43,10 @@ namespace Classroom.Services.Interface
         // Comment validation
         ValidationResult ValidateCreateComment(CreateCommentDto dto);
         ValidationResult ValidateUpdateComment(UpdateCommentDto dto);
+
+        // Email validation
+        ValidationResult ValidateCourseInvitation(CourseInvitationDto dto);
+        ValidationResult ValidateBulkCourseInvitation(BulkCourseInvitationDto dto);
 
         void ValidateAndThrow<T>(T dto, IValidator<T> validator);
     }

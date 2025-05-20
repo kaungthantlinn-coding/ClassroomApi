@@ -23,4 +23,6 @@ public interface ICourseService
     Task<string?> RegenerateEnrollmentCodeAsync(int courseId, int userId);
     Task<CourseDetailDto?> GetCourseDetailAsync(int courseId, int userId);
     Task<bool> UpdateCourseThemeAsync(CourseThemeDto themeDto, int userId);
+    Task<CourseDto?> GetCourseByEnrollmentCodeAsync(string enrollmentCode);
+    Task<bool> IsUserEnrolledAsync(int courseId, int userId);
 }

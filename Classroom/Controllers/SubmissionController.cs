@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.IO;
 
 namespace Classroom.Controllers;
 
@@ -13,10 +14,12 @@ namespace Classroom.Controllers;
 public class SubmissionController : ControllerBase
 {
     private readonly ISubmissionService _submissionService;
+    private readonly IFileService _fileService;
 
-    public SubmissionController(ISubmissionService submissionService)
+    public SubmissionController(ISubmissionService submissionService, IFileService fileService)
     {
         _submissionService = submissionService;
+        _fileService = fileService;
     }
 
     // GET: api/assignments/{assignmentId}/submissions
@@ -199,6 +202,66 @@ public class SubmissionController : ControllerBase
         catch (KeyNotFoundException ex)
         {
             return NotFound(new { message = ex.Message });
+        }
+    }
+
+
+
+    /// <summary>
+    /// Gets all files for a submission
+    /// </summary>
+    /// <param name="submissionId">The ID of the submission</param>
+    /// <param name="studentId">Optional: The ID of the student who owns the submission</param>
+    /// <returns>List of files in the submission</returns>
+    /// <response code="200">Returns the list of files if found and user has access</response>
+    /// <response code="403">If the user doesn't have permission to access this submission</response>
+    /// <response code="404">If the submission is not found</response>
+    [HttpGet("submissions/{submissionId}/files")]
+    public async Task<IActionResult> GetSubmissionFiles(int submissionId, [FromQuery] int? studentId = null)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        try
+        {
+            // Verify the user has access to this submission
+            var submission = await _submissionService.GetSubmissionByIdAsync(submissionId, currentUserId);
+            if (submission == null)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "You don't have permission to access this submission" });
+            }
+
+            // Get all files for the submission
+            var files = await _fileService.GetSubmissionFilesAsync(submissionId);
+
+            // Map to response DTOs
+            var fileResponses = files.Select(f => new SubmissionFileResponseDto
+            {
+                AttachmentId = f.AttachmentId,
+                Name = f.Name,
+                Type = f.Type,
+                Size = f.Size ?? 0,
+                Url = f.Url,
+                UploadDate = f.UploadDate ?? DateTime.UtcNow
+            }).ToList();
+
+            return Ok(new SubmissionFilesResponseDto
+            {
+                Success = true,
+                Files = fileResponses
+            });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = $"Error retrieving files: {ex.Message}" });
         }
     }
 }

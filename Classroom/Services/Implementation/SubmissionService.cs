@@ -1,5 +1,6 @@
 using Classroom.Dtos.Submission;
 using Classroom.Dtos.Grade;
+using Classroom.Dtos.Notification;
 using Classroom.Models;
 using Classroom.Repositories.Interface;
 using Classroom.Services.Interface;
@@ -15,17 +16,23 @@ public class SubmissionService : ISubmissionService
     private readonly IAssignmentRepository _assignmentRepository;
     private readonly ICourseRepository _courseRepository;
     private readonly ClassroomContext _context;
+    private readonly INotificationService _notificationService;
+    private readonly ILogger<SubmissionService> _logger;
 
     public SubmissionService(
         ISubmissionRepository submissionRepository,
         IAssignmentRepository assignmentRepository,
         ICourseRepository courseRepository,
-        ClassroomContext context)
+        ClassroomContext context,
+        INotificationService notificationService,
+        ILogger<SubmissionService> logger)
     {
         _submissionRepository = submissionRepository;
         _assignmentRepository = assignmentRepository;
         _courseRepository = courseRepository;
         _context = context;
+        _notificationService = notificationService;
+        _logger = logger;
     }
 
     public async Task<List<SubmissionDto>> GetAssignmentSubmissionsAsync(int assignmentId, int teacherId)
@@ -148,6 +155,37 @@ public class SubmissionService : ISubmissionService
 
         // Load related entities for the response
         var submissionWithDetails = await _submissionRepository.GetSubmissionByIdAsync(createdSubmission.SubmissionId);
+
+        try
+        {
+            // Get course information for the notification
+            // Ensure ClassId is not null before passing to GetByIdAsync
+            if (assignment.ClassId.HasValue)
+            {
+                var course = await _courseRepository.GetByIdAsync(assignment.ClassId.Value);
+                if (course != null)
+                {
+                    // Get student information
+                    var student = await _context.Users.FindAsync(studentId);
+                    if (student != null)
+                    {
+                        // Send notification to teachers
+                        await _notificationService.SendSubmissionNotificationAsync(
+                            submission, // Use the original submission model, not the DTO
+                            assignment,
+                            student,
+                            course);
+
+                        _logger.LogInformation($"Sent submission notification for submission {submissionWithDetails.SubmissionId} by student {student.Name}");
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't fail the submission creation
+            _logger.LogError(ex, $"Failed to send notification for submission {submissionWithDetails.SubmissionId}");
+        }
 
         return new SubmissionDto
         {

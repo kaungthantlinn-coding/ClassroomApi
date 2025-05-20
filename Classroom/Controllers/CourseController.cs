@@ -1,5 +1,6 @@
 using Classroom.Dtos;
 using Classroom.Dtos.Course;
+using Classroom.Dtos.Enrollment;
 using Classroom.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -14,10 +15,17 @@ namespace Classroom.Controllers;
 public class CourseController : ControllerBase
 {
     private readonly ICourseService _courseService;
+    private readonly IEnrollmentRequestService _enrollmentRequestService;
+    private readonly ILogger<CourseController> _logger;
 
-    public CourseController(ICourseService courseService)
+    public CourseController(
+        ICourseService courseService,
+        IEnrollmentRequestService enrollmentRequestService,
+        ILogger<CourseController> logger)
     {
         _courseService = courseService;
+        _enrollmentRequestService = enrollmentRequestService;
+        _logger = logger;
     }
 
     // GET: api/courses
@@ -114,7 +122,7 @@ public class CourseController : ControllerBase
     }
 
     // POST: api/courses/{id}/enroll
-    // Enroll in a course (student only)
+    // Request to enroll in a course (student only)
     [HttpPost("{id}/enroll")]
     [Authorize(Roles = "Student")]
     public async Task<IActionResult> EnrollInCourse(int id, [FromBody] EnrollCourseDto enrollCourseDto)
@@ -125,14 +133,54 @@ public class CourseController : ControllerBase
         }
 
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var result = await _courseService.EnrollInCourseAsync(id, enrollCourseDto.EnrollmentCode, currentUserId);
 
-        if (!result)
+        try
         {
-            return BadRequest(new { message = "Failed to enroll in course. Check if the course exists and the enrollment code is correct." });
-        }
+            // First verify the enrollment code is correct
+            var course = await _courseService.GetCourseByIdAsync(id, currentUserId);
+            if (course == null || course.EnrollmentCode != enrollCourseDto.EnrollmentCode)
+            {
+                return BadRequest(new { success = false, message = "Invalid enrollment code or course not found." });
+            }
 
-        return Ok(new { message = "Successfully enrolled in course" });
+            // Check if the student is already enrolled
+            var isEnrolled = await _courseService.IsUserEnrolledAsync(id, currentUserId);
+            if (isEnrolled)
+            {
+                return BadRequest(new { success = false, message = "You are already enrolled in this course." });
+            }
+
+            // Check if there's already a pending enrollment request
+            var hasPendingRequest = await _enrollmentRequestService.HasPendingEnrollmentRequestAsync(id, currentUserId);
+            if (hasPendingRequest)
+            {
+                return BadRequest(new { success = false, message = "You already have a pending enrollment request for this course." });
+            }
+
+            // Create enrollment request
+            var createEnrollmentRequestDto = new CreateEnrollmentRequestDto
+            {
+                CourseId = id
+            };
+
+            var enrollmentRequest = await _enrollmentRequestService.CreateEnrollmentRequestAsync(createEnrollmentRequestDto, currentUserId);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Enrollment request submitted successfully. Waiting for teacher approval.",
+                enrollmentRequest = enrollmentRequest
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error requesting enrollment for course {id} by user {currentUserId}");
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                success = false,
+                message = $"Error requesting enrollment: {ex.Message}"
+            });
+        }
     }
 
     // POST: api/courses/{id}/unenroll
@@ -303,8 +351,8 @@ public class CourseController : ControllerBase
     }
 
     // POST: api/courses/enroll-by-code
-    // Enroll in a course using just the enrollment code
-    // This endpoint works for both students and teachers
+    // Request to enroll in a course using just the enrollment code
+    // Teachers are automatically enrolled, students need approval
     [HttpPost("enroll-by-code")]
     public async Task<IActionResult> EnrollByCode([FromBody] EnrollCourseDto enrollCourseDto)
     {
@@ -314,13 +362,86 @@ public class CourseController : ControllerBase
         }
 
         var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-        var result = await _courseService.EnrollInCourseByCodeAsync(enrollCourseDto.EnrollmentCode, currentUserId);
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
 
-        if (!result)
+        try
         {
-            return BadRequest(new { message = "Failed to enroll in course. Check if the course exists and the enrollment code is correct." });
-        }
+            // If user is a teacher, directly enroll them
+            if (userRole == "Teacher")
+            {
+                var result = await _courseService.EnrollInCourseByCodeAsync(enrollCourseDto.EnrollmentCode, currentUserId);
 
-        return Ok(new { message = "Successfully enrolled in course" });
+                if (!result)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Failed to enroll in course. Check if the course exists and the enrollment code is correct."
+                    });
+                }
+
+                return Ok(new { success = true, message = "Successfully enrolled in course" });
+            }
+            else // For students, create an enrollment request
+            {
+                // First, find the course by enrollment code
+                var course = await _courseService.GetCourseByEnrollmentCodeAsync(enrollCourseDto.EnrollmentCode);
+                if (course == null)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "Invalid enrollment code or course not found."
+                    });
+                }
+
+                // Check if the student is already enrolled
+                var isEnrolled = await _courseService.IsUserEnrolledAsync(course.CourseId, currentUserId);
+                if (isEnrolled)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "You are already enrolled in this course."
+                    });
+                }
+
+                // Check if there's already a pending enrollment request
+                var hasPendingRequest = await _enrollmentRequestService.HasPendingEnrollmentRequestAsync(course.CourseId, currentUserId);
+                if (hasPendingRequest)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "You already have a pending enrollment request for this course."
+                    });
+                }
+
+                // Create enrollment request
+                var createEnrollmentRequestDto = new CreateEnrollmentRequestDto
+                {
+                    CourseId = course.CourseId
+                };
+
+                var enrollmentRequest = await _enrollmentRequestService.CreateEnrollmentRequestAsync(createEnrollmentRequestDto, currentUserId);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Enrollment request submitted successfully. Waiting for teacher approval.",
+                    enrollmentRequest = enrollmentRequest,
+                    course = course
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Error processing enrollment by code for user {currentUserId}");
+            return StatusCode(StatusCodes.Status500InternalServerError, new
+            {
+                success = false,
+                message = $"Error processing enrollment: {ex.Message}"
+            });
+        }
     }
 }

@@ -9,4 +9,5 @@ public interface IAssignmentService
     Task<AssignmentDto> CreateAssignmentAsync(int courseId, CreateAssignmentDto createAssignmentDto, int teacherId);
     Task<AssignmentDto?> UpdateAssignmentAsync(int assignmentId, UpdateAssignmentDto updateAssignmentDto, int userId);
     Task<bool> DeleteAssignmentAsync(int assignmentId, int userId);
+    Task<List<CalendarAssignmentDto>> GetCalendarAssignmentsAsync(string startDate, string endDate, int userId);
 }

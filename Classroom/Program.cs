@@ -9,6 +9,7 @@ using Classroom.Dtos.Announcement;
 using Classroom.Dtos.Assignment;
 using Classroom.Dtos.Material;
 using Classroom.Dtos.Course;
+using Classroom.Dtos.Email;
 using Classroom.Dtos;
 using Classroom.Validators.Submission;
 using Classroom.Validators.Comment;
@@ -17,7 +18,9 @@ using Classroom.Validators.Material;
 using Classroom.Validators.Auth;
 using Classroom.Validators.Announcement;
 using Classroom.Validators.Course;
+using Classroom.Validators.Email;
 using Classroom.Configuration;
+using Classroom.Hubs;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -52,6 +55,9 @@ namespace Classroom
             builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
             var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
                 ?? throw new InvalidOperationException("JwtSettings configuration is missing");
+
+            // Configure Email Settings
+            builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 
             // Set Secret equal to Key for backward compatibility
             jwtSettings.Secret = jwtSettings.Key;
@@ -89,6 +95,24 @@ namespace Classroom
                     ValidAudience = jwtSettings.Audience,
                     ClockSkew = TimeSpan.Zero
                 };
+
+                // Configure JWT authentication for SignalR
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+
+                        // If the request is for our hub...
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                        {
+                            // Read the token out of the query string
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
             // Register DbContext
@@ -104,6 +128,8 @@ namespace Classroom
             builder.Services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
             builder.Services.AddScoped<ISubmissionRepository, SubmissionRepository>();
             builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+            builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+            builder.Services.AddScoped<IEnrollmentRequestRepository, EnrollmentRequestRepository>();
 
             // Register Services
             builder.Services.AddScoped<IAuthService, AuthService>();
@@ -122,11 +148,19 @@ namespace Classroom
                     provider.GetRequiredService<ISubmissionRepository>(),
                     provider.GetRequiredService<IAssignmentRepository>(),
                     provider.GetRequiredService<ICourseRepository>(),
-                    provider.GetRequiredService<ClassroomContext>()
+                    provider.GetRequiredService<ClassroomContext>(),
+                    provider.GetRequiredService<INotificationService>(),
+                    provider.GetRequiredService<ILogger<SubmissionService>>()
                 ));
             builder.Services.AddScoped<ICommentService, CommentService>();
             builder.Services.AddScoped<IValidationService, ValidationService>();
             builder.Services.AddScoped<IFileService, FileService>();
+            builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<IEnrollmentRequestService, EnrollmentRequestService>();
+
+            // Add SignalR
+            builder.Services.AddSignalR();
 
             // Register FluentValidation but disable automatic validation for assignments and materials
             builder.Services.AddFluentValidationClientsideAdapters();
@@ -170,6 +204,10 @@ namespace Classroom
             builder.Services.AddScoped<IValidator<UpdateCourseDto>, UpdateCourseValidator>();
             builder.Services.AddScoped<IValidator<EnrollCourseDto>, EnrollCourseValidator>();
             builder.Services.AddScoped<IValidator<CourseThemeDto>, CourseThemeValidator>();
+
+            // Email validators
+            builder.Services.AddScoped<IValidator<CourseInvitationDto>, CourseInvitationValidator>();
+            builder.Services.AddScoped<IValidator<BulkCourseInvitationDto>, BulkCourseInvitationValidator>();
 
             // Configure OpenAPI/Swagger
             builder.Services.AddOpenApi();
@@ -232,6 +270,9 @@ namespace Classroom
             app.UseAuthorization();
 
             app.MapControllers();
+
+            // Map SignalR hubs
+            app.MapHub<NotificationHub>("/hubs/notifications");
 
             app.Run();
         }

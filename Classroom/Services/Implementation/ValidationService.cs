@@ -2,6 +2,7 @@ using Classroom.Dtos;
 using Classroom.Dtos.Announcement;
 using Classroom.Dtos.Assignment;
 using Classroom.Dtos.Course;
+using Classroom.Dtos.Email;
 using Classroom.Dtos.Material;
 using Classroom.Dtos.Submission;
 using Classroom.Services.Interface;
@@ -44,6 +45,10 @@ namespace Classroom.Services.Implementation
         private readonly IValidator<CreateCommentDto> _createCommentValidator;
         private readonly IValidator<UpdateCommentDto> _updateCommentValidator;
 
+        // Email validators
+        private readonly IValidator<CourseInvitationDto> _courseInvitationValidator;
+        private readonly IValidator<BulkCourseInvitationDto> _bulkCourseInvitationValidator;
+
         public ValidationService(
             // Submission validators
             IValidator<CreateSubmissionDto> createSubmissionValidator,
@@ -75,7 +80,11 @@ namespace Classroom.Services.Implementation
 
             // Comment validators
             IValidator<CreateCommentDto> createCommentValidator,
-            IValidator<UpdateCommentDto> updateCommentValidator)
+            IValidator<UpdateCommentDto> updateCommentValidator,
+
+            // Email validators
+            IValidator<CourseInvitationDto> courseInvitationValidator,
+            IValidator<BulkCourseInvitationDto> bulkCourseInvitationValidator)
         {
             // Submission validators
             _createSubmissionValidator = createSubmissionValidator;
@@ -108,6 +117,10 @@ namespace Classroom.Services.Implementation
             // Comment validators
             _createCommentValidator = createCommentValidator;
             _updateCommentValidator = updateCommentValidator;
+
+            // Email validators
+            _courseInvitationValidator = courseInvitationValidator;
+            _bulkCourseInvitationValidator = bulkCourseInvitationValidator;
         }
 
         public ValidationResult ValidateCreateSubmission(CreateSubmissionDto dto)
@@ -202,6 +215,17 @@ namespace Classroom.Services.Implementation
         public ValidationResult ValidateUpdateComment(UpdateCommentDto dto)
         {
             return _updateCommentValidator.Validate(dto);
+        }
+
+        // Email validation methods
+        public ValidationResult ValidateCourseInvitation(CourseInvitationDto dto)
+        {
+            return _courseInvitationValidator.Validate(dto);
+        }
+
+        public ValidationResult ValidateBulkCourseInvitation(BulkCourseInvitationDto dto)
+        {
+            return _bulkCourseInvitationValidator.Validate(dto);
         }
 
         // Helper method to throw exception if validation fails

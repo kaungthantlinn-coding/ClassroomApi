@@ -1,6 +1,7 @@
 using Classroom.Dtos.Assignment;
 using Classroom.Services.Interface;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -108,6 +109,28 @@ public class AssignmentController : ControllerBase
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    // GET: api/calendar/assignments
+    // Get assignments for calendar view across all courses the user is enrolled in
+    [HttpGet("calendar/assignments")]
+    public async Task<IActionResult> GetCalendarAssignments([FromQuery] string? startDate, [FromQuery] string? endDate)
+    {
+        var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+
+        try
+        {
+            var assignments = await _assignmentService.GetCalendarAssignmentsAsync(
+                startDate ?? string.Empty,
+                endDate ?? string.Empty,
+                currentUserId);
+
+            return Ok(assignments);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
         }
     }
 }
